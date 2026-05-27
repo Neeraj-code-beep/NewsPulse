@@ -1,0 +1,46 @@
+.about-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+.about-content {
+  text-align: center;
+}
+.about-content h1 {
+  font-size: 2.5em;
+  margin-bottom: 20px;
+}
+.about-content p {
+  font-size: 1.2em;
+  margin-bottom: 20px;
+}
+.about-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 50px;
+  margin-bottom: 20px;
+}
+.about-button {
+  padding: 10px 20px;
+  font-size: 1em;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.about-button:hover {
+  background-color: #0056b3;
+}
+.about-footer {
+  margin-top: 20px;
+}
+.about-footer a {
+  text-decoration: none;
+  color: #007bff;
+}
+.about-footer a:hover {
+  text-decoration: underline;
+}
