@@ -14,7 +14,7 @@ function NewsBox() {
   const [user, setUser] = useState(null);
   const [text, setText] = useState('');
 
-  async function seach() {
+  async function search() {
     if (!text || text === '') {
       toast.warn('Please enter a search term');
       return;
@@ -113,7 +113,7 @@ function NewsBox() {
           </div>
 
           <button
-            onClick={seach}
+            onClick={search}
             className="bg-gradient-to-r from-blue-500 to-cyan-400 hover:scale-105 transition-all duration-300 px-8 py-4 rounded-2xl font-semibold shadow-lg shadow-cyan-500/20"
           >
             Search

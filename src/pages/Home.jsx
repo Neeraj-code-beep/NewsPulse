@@ -1,5 +1,5 @@
 import React from 'react';
-import Catagories from '../components/catagories';
+import Categories from '../components/categories';
 import NewsBox from '../components/news-box';
 import FavoriteBox from '../components/fav-box';
 
@@ -11,7 +11,7 @@ function HomePage() {
         {/* Left Sidebar - Categories */}
         <div className="xl:col-span-3">
           <div className="sticky top-24">
-            <Catagories />
+            <Categories />
           </div>
         </div>
 

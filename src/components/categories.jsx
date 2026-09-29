@@ -12,7 +12,7 @@ const categories = [
   { title: 'Technology', id: 7 },
 ];
 
-function Catagories() {
+function Categories() {
   return (
     <div className="w-full rounded-3xl border border-cyan-500/10 bg-[#0B0F19] p-6 shadow-[0_0_40px_rgba(0,255,255,0.05)]">
       {/* Header */}
@@ -48,4 +48,4 @@ function Catagories() {
   );
 }
 
-export default Catagories;
+export default Categories;

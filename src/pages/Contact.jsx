@@ -1,7 +1,6 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
-import '../contact.css';
 
 const Contact = () => {
   const {
@@ -40,7 +39,7 @@ const Contact = () => {
   };
 
   return (
-    <section className="contacts mt-10 px-4">
+    <section className="mt-10 px-4">
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="max-w-xl mx-auto bg-white shadow-lg rounded-2xl p-6 border border-gray-200"

@@ -22,13 +22,13 @@ import {
 } from '../utils';
 
 function NewsCard({ news }) {
-  const [loading, SetLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [isFav, setIsFav] = useState(false);
 
   async function add_to_fav() {
     try {
-      SetLoading(true);
+      setLoading(true);
 
       const ref = doc(firestore, 'favourites', user.uid);
 
@@ -66,13 +66,13 @@ function NewsCard({ news }) {
 
       toast.warn('Something went wrong');
     } finally {
-      SetLoading(false);
+      setLoading(false);
     }
   }
 
   async function remove_from_fav() {
     try {
-      SetLoading(true);
+      setLoading(true);
 
       const id = createUniqueIdentifier(news);
 
@@ -93,7 +93,7 @@ function NewsCard({ news }) {
     } catch (error) {
       toast.warn('Something went wrong');
     } finally {
-      SetLoading(false);
+      setLoading(false);
     }
   }
 

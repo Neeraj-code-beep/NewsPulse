@@ -25,20 +25,20 @@ function Navbar() {
   const active =
     'bg-blue-700 text-white hover:bg-blue-600  rounded md:bg-transparent md:text-blue-700';
 
-  const [loggedin, SetLoggedIn] = useState(false);
+  const [loggedin, setLoggedIn] = useState(false);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user'));
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        SetLoggedIn(true);
+        setLoggedIn(true);
         return;
       }
     });
 
     if (user) {
-      SetLoggedIn(true);
+      setLoggedIn(true);
       return;
     }
   }, []);
@@ -149,7 +149,7 @@ function Navbar() {
                             label: 'Yes',
                             onClick: () => {
                               logout();
-                              SetLoggedIn(false);
+                              setLoggedIn(false);
                             },
                           },
                           {
