@@ -96,6 +96,26 @@ Base URL: `http://localhost:5000/api/v1`
 }
 ```
 
+### Current authenticated user
+- **URL**: `GET /api/v1/auth/me`
+- **Authentication**: Firebase ID token in the `Authorization` header using `Bearer <token>`.
+- **Description**: Verifies the Firebase ID token with Firebase Admin and returns the verified user's UID, email, and email verification status.
+- **Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "uid": "firebase-user-id",
+      "email": "user@example.com",
+      "emailVerified": true
+    }
+  }
+}
+```
+
+Missing or invalid tokens return HTTP 401 with `AUTH_REQUIRED` or `AUTH_INVALID_TOKEN`. The frontend API client obtains ID tokens from the current Firebase Auth user; tokens are not stored separately by the application.
+
 ### Error Responses
 All errors follow a standardized format:
 ```json

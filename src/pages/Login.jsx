@@ -5,7 +5,7 @@ import { auth } from '../../firebase/firebase.config';
 
 import { toast } from 'react-toastify';
 
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
 
 import { Eye, EyeOff, Mail, Lock, Newspaper, Loader2 } from 'lucide-react';
 
@@ -31,13 +31,7 @@ function LoginPage() {
     try {
       setLoading(true);
 
-      const user = await signInWithEmailAndPassword(
-        auth,
-        data.email,
-        data.password,
-      );
-
-      localStorage.setItem('user', JSON.stringify(user));
+      await signInWithEmailAndPassword(auth, data.email, data.password);
 
       toast.success('Logged in successfully');
 
@@ -52,9 +46,11 @@ function LoginPage() {
   useEffect(() => {
     if (loading) return;
 
-    if (auth.currentUser || localStorage.getItem('user')) {
-      router('/');
-    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) router('/', { replace: true });
+    });
+
+    return () => unsubscribe();
   }, [loading, router]);
 
   return (

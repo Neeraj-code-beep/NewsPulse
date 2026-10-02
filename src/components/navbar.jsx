@@ -15,7 +15,6 @@ function Navbar() {
     try {
       await signOut(auth);
       toast.success('Logged out successfully');
-      localStorage.removeItem('user');
       router('/', { replace: true });
     } catch (error) {
       toast.warn('Failed to logout');
@@ -28,19 +27,13 @@ function Navbar() {
   const [loggedin, setLoggedIn] = useState(false);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user'));
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setLoggedIn(true);
-        return;
-      }
+    // Remove the legacy serialized Firebase user object; Firebase owns auth persistence.
+    localStorage.removeItem('user');
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setLoggedIn(Boolean(user));
     });
 
-    if (user) {
-      setLoggedIn(true);
-      return;
-    }
+    return () => unsubscribe();
   }, []);
   return (
     <nav className="bg-gradient-to-r from-black via-zinc-900 to-gray-950 border-b border-white/10 sticky top-0 z-50 backdrop-blur-xl">

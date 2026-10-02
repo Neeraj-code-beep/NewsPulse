@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import authRouter from './auth.routes.js';
 import newsRouter from './news.routes.js';
 
 const router = Router();
@@ -37,5 +38,11 @@ router.get('/health', (req, res) => {
  * Mounts under /api/v1/news
  */
 router.use('/news', newsRouter);
+
+/**
+ * Authentication routes
+ * Mounts under /api/v1/auth
+ */
+router.use('/auth', authRouter);
 
 export default router;
