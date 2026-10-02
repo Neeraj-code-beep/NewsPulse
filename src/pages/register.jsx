@@ -10,9 +10,8 @@ import {
   onAuthStateChanged,
   updateProfile,
 } from 'firebase/auth';
-import { auth, firestore } from '../../firebase/firebase.config';
+import { auth } from '../../firebase/firebase.config';
 import { toast } from 'react-toastify';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
 const regSchema = z
@@ -54,18 +53,6 @@ function RegisterPage() {
     },
   });
 
-  async function createFavDocument(uid) {
-    const favRef = doc(firestore, 'favourites', uid);
-
-    const favSnap = await getDoc(favRef);
-
-    if (!favSnap.exists()) {
-      await setDoc(favRef, {
-        favourites: [],
-      });
-    }
-  }
-
   async function handleRegister(data) {
     try {
       const resp = await createUserWithEmailAndPassword(
@@ -79,8 +66,6 @@ function RegisterPage() {
       await updateProfile(user, {
         displayName: data.name,
       });
-
-      await createFavDocument(user.uid);
 
       toast.success('Account created successfully');
 
@@ -110,8 +95,6 @@ function RegisterPage() {
       if (!user) {
         throw new Error('Authentication failed');
       }
-
-      await createFavDocument(user.uid);
 
       toast.success('Logged in successfully');
 

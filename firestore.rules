@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function ownsDocument(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function validFavouritesDocument() {
+      return request.resource.data.keys().hasAll(['favourites'])
+        && request.resource.data.keys().hasOnly(['favourites'])
+        && request.resource.data.favourites is list;
+    }
+
+    match /favourites/{uid} {
+      allow get: if ownsDocument(uid);
+      allow list: if false;
+      allow create: if ownsDocument(uid) && validFavouritesDocument();
+      allow update: if ownsDocument(uid) && validFavouritesDocument();
+      allow delete: if ownsDocument(uid);
+    }
+  }
+}

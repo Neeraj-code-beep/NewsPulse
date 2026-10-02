@@ -1,23 +1,13 @@
-import { onAuthStateChanged } from 'firebase/auth';
 import { ArrowLeft, Heart, Loader2, ExternalLink } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { auth, firestore } from '../../firebase/firebase.config';
-import {
-  arrayRemove,
-  arrayUnion,
-  doc,
-  getDoc,
-  onSnapshot,
-  setDoc,
-  updateDoc,
-} from 'firebase/firestore';
 import {
   convertISOStringToReadableTime,
   createUniqueIdentifier,
 } from '../utils';
 import API from '../services/NewsApi.jsx';
+import { useFavourites } from '../hooks/useFavourites';
 
 function News() {
   const { newsID } = useParams();
@@ -100,38 +90,10 @@ function News() {
 export default News;
 
 function HorNewsCard({ article }) {
-  const [isFav, setIsFav] = useState(false);
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
-
+  const { user, favourites, addFavourite, removeFavourite } = useFavourites();
   const articleId = createUniqueIdentifier(article);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (!currentUser) {
-        setUser(null);
-        return;
-      }
-
-      setUser(currentUser);
-
-      const ref = doc(firestore, 'favourites', currentUser.uid);
-
-      const unsubSnapshot = onSnapshot(ref, (docSnap) => {
-        if (docSnap.exists()) {
-          const favourites = docSnap.data()?.favourites || [];
-
-          const exists = favourites.some((fav) => fav.id === articleId);
-
-          setIsFav(exists);
-        }
-      });
-
-      return () => unsubSnapshot();
-    });
-
-    return () => unsubscribe();
-  }, [articleId]);
+  const isFav = favourites.some((favourite) => favourite.id === articleId);
 
   async function add_to_fav() {
     if (!user) {
@@ -142,26 +104,10 @@ function HorNewsCard({ article }) {
     try {
       setLoading(true);
 
-      const ref = doc(firestore, 'favourites', user.uid);
-
-      const docSnap = await getDoc(ref);
-
-      if (!docSnap.exists()) {
-        await setDoc(ref, {
-          favourites: [],
-        });
-      }
-
-      await updateDoc(ref, {
-        favourites: arrayUnion({
-          id: articleId,
-          news: article,
-        }),
-      });
+      await addFavourite(article);
 
       toast.success('Added to favourites');
     } catch (error) {
-      console.log(error);
       toast.error('Something went wrong');
     } finally {
       setLoading(false);
@@ -172,18 +118,10 @@ function HorNewsCard({ article }) {
     try {
       setLoading(true);
 
-      const ref = doc(firestore, 'favourites', user.uid);
-
-      await updateDoc(ref, {
-        favourites: arrayRemove({
-          id: articleId,
-          news: article,
-        }),
-      });
+      await removeFavourite(article);
 
       toast.success('Removed from favourites');
     } catch (error) {
-      console.log(error);
       toast.error('Something went wrong');
     } finally {
       setLoading(false);

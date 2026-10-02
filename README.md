@@ -74,3 +74,11 @@ VITE_FIREBASE_STORAGE_BUCKET=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 ```
+
+## Firestore bookmarks
+
+Bookmark documents use the `favourites/{uid}` path and store article entries in a `favourites` array. The rules in `firestore.rules` allow authenticated users to read and write only the document whose ID matches their Firebase UID; collection listing is denied. After selecting the Firebase project in the Firebase CLI, deploy the rules from the repository root with:
+
+```bash
+firebase deploy --only firestore:rules
+```

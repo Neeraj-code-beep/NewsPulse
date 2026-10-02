@@ -1,56 +1,24 @@
-import React, { useEffect, useState } from 'react';
-import { auth, firestore } from '../../firebase/firebase.config';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Heart, Loader, Trash2, Bookmark, Sparkles } from 'lucide-react';
-
-import {
-  arrayRemove,
-  doc,
-  getDoc,
-  onSnapshot,
-  updateDoc,
-} from 'firebase/firestore';
-
-import { onAuthStateChanged } from 'firebase/auth';
-import { createUniqueIdentifier } from '../utils';
+import { useFavourites } from '../hooks/useFavourites';
 
 function FavoriteBox() {
-  const [favourites, setFavourites] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
+  const { favourites, loading, authLoading, user, error, removeFavourite } = useFavourites();
+  const [removingId, setRemovingId] = useState(null);
 
-  const fetch_fav = async () => {
-    if (!user) return;
-
-    const ref = doc(firestore, 'favourites', user.uid);
-
-    const data = await getDoc(ref);
-
-    if (data.exists()) {
-      setFavourites(data.data().favourites);
+  async function removeArticle(article) {
+    try {
+      setRemovingId(article.id || article.title);
+      await removeFavourite(article);
+      toast.success('Removed from favourites');
+    } catch {
+      toast.warn('Something went wrong');
+    } finally {
+      setRemovingId(null);
     }
-
-    onSnapshot(ref, (docSnap) => {
-      if (docSnap.exists()) {
-        setFavourites(docSnap.data().favourites);
-      }
-    });
-
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUser(user);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    fetch_fav();
-  }, [user]);
+  }
 
   return (
     <div className="bg-gradient-to-br from-black via-zinc-900 to-gray-950 border border-white/10 rounded-3xl p-6 shadow-2xl text-white">
@@ -78,7 +46,12 @@ function FavoriteBox() {
         </div>
       </div>
 
-      {user ? (
+      {authLoading ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <Loader className="animate-spin text-cyan-300" size={45} />
+          <p className="text-zinc-400 mt-4">Checking your account...</p>
+        </div>
+      ) : user ? (
         <div className="w-full">
           {/* Loader */}
           {loading && (
@@ -90,7 +63,13 @@ function FavoriteBox() {
           )}
 
           {/* Empty State */}
-          {!loading && favourites.length === 0 && (
+          {!loading && error && (
+            <p role="alert" className="py-8 text-center text-red-300">
+              Could not load your favourites. Please try again.
+            </p>
+          )}
+
+          {!loading && !error && favourites.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Bookmark size={60} className="text-zinc-600 mb-5" />
 
@@ -104,10 +83,15 @@ function FavoriteBox() {
           )}
 
           {/* Favourite List */}
-          {!loading && favourites.length > 0 && (
+          {!loading && !error && favourites.length > 0 && (
             <ul className="space-y-5">
-              {favourites.map((news, index) => (
-                <ListItem user={user} key={index} art={news.news} />
+              {favourites.map((favourite, index) => (
+                <ListItem
+                  key={favourite.id || index}
+                  art={favourite.news}
+                  loading={removingId === (favourite.news?.id || favourite.news?.title)}
+                  onRemove={() => removeArticle(favourite.news)}
+                />
               ))}
             </ul>
           )}
@@ -136,28 +120,7 @@ function FavoriteBox() {
 
 export default FavoriteBox;
 
-const ListItem = ({ art, user }) => {
-  async function remove_from_fav() {
-    try {
-      const id = createUniqueIdentifier(art);
-
-      const ref = doc(firestore, 'favourites', user.uid);
-
-      await updateDoc(ref, {
-        favourites: arrayRemove({
-          id: id,
-          news: {
-            ...art,
-          },
-        }),
-      });
-
-      toast.success('Removed from favourites');
-    } catch (error) {
-      toast.warn('Something went wrong');
-    }
-  }
-
+const ListItem = ({ art, loading, onRemove }) => {
   return (
     <li className="group bg-white/5 border border-white/10 hover:border-red-400/40 rounded-2xl p-5 flex items-start justify-between gap-5 hover:bg-white/10 transition-all duration-300">
       <div className="flex-1">
@@ -173,15 +136,13 @@ const ListItem = ({ art, user }) => {
       </div>
 
       <button
-        onClick={() => {
-          remove_from_fav();
-        }}
+        disabled={loading}
+        onClick={onRemove}
         className="bg-red-500/10 hover:bg-red-500 p-3 rounded-xl transition-all duration-300 group/button"
       >
-        <Trash2
-          size={20}
-          className="text-red-400 group-hover/button:text-white"
-        />
+        {loading ? <Loader size={20} className="animate-spin text-red-400" /> : (
+          <Trash2 size={20} className="text-red-400 group-hover/button:text-white" />
+        )}
       </button>
     </li>
   );

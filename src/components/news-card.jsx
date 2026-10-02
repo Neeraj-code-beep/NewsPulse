@@ -1,20 +1,9 @@
-import {
-  arrayRemove,
-  arrayUnion,
-  doc,
-  getDoc,
-  updateDoc,
-} from 'firebase/firestore';
-
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 import { Heart, CalendarDays, User, ExternalLink, Loader2 } from 'lucide-react';
 
-import { auth, firestore } from '../../firebase/firebase.config';
-
 import { toast } from 'react-toastify';
-
-import { onAuthStateChanged } from 'firebase/auth';
+import { useFavourites } from '../hooks/useFavourites';
 
 import {
   convertISOStringToReadableTime,
@@ -23,111 +12,31 @@ import {
 
 function NewsCard({ news }) {
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null);
-  const [isFav, setIsFav] = useState(false);
+  const { user, favourites, addFavourite, removeFavourite } = useFavourites();
+  const articleId = createUniqueIdentifier(news);
+  const isFav = favourites.some((favourite) => favourite.id === articleId);
 
-  async function add_to_fav() {
+  async function toggleFavourite() {
+    if (!user) {
+      toast.warning('Please login first');
+      return;
+    }
+
     try {
       setLoading(true);
-
-      const ref = doc(firestore, 'favourites', user.uid);
-
-      const docSnap = await getDoc(ref);
-
-      const d = docSnap.data();
-
-      if (d?.favourites?.length > 0) {
-        await updateDoc(ref, {
-          favourites: arrayUnion({
-            id: createUniqueIdentifier(news),
-            news: {
-              ...news,
-            },
-          }),
-        });
+      if (isFav) {
+        await removeFavourite(news);
+        toast.success('Removed from favourites');
       } else {
-        await updateDoc(ref, {
-          favourites: [
-            {
-              id: createUniqueIdentifier(news),
-              news: {
-                ...news,
-              },
-            },
-          ],
-        });
+        await addFavourite(news);
+        toast.success('Added to favourites');
       }
-
-      setIsFav(true);
-
-      toast.success('Added to favourites');
-    } catch (error) {
-      console.log(error);
-
-      toast.warn('Something went wrong');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function remove_from_fav() {
-    try {
-      setLoading(true);
-
-      const id = createUniqueIdentifier(news);
-
-      const ref = doc(firestore, 'favourites', user.uid);
-
-      await updateDoc(ref, {
-        favourites: arrayRemove({
-          id: id,
-          news: {
-            ...news,
-          },
-        }),
-      });
-
-      toast.success('Removed from favourites');
-
-      setIsFav(false);
     } catch (error) {
       toast.warn('Something went wrong');
     } finally {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUser(user);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      if (!user) return;
-
-      const ref = doc(firestore, 'favourites', user?.uid);
-
-      const data = await getDoc(ref);
-
-      if (data.exists()) {
-        const d = data.data();
-
-        if (d.favourites.length > 0) {
-          const fav = d.favourites.find(
-            (fav) => fav.id === createUniqueIdentifier(news),
-          );
-
-          if (fav) {
-            setIsFav(true);
-          }
-        }
-      }
-    })();
-  }, [user]);
 
   return (
     <div className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-zinc-900 to-black shadow-2xl hover:border-cyan-400/40 transition-all duration-500 hover:-translate-y-1">
@@ -157,9 +66,7 @@ function NewsCard({ news }) {
         {user && (
           <button
             disabled={loading}
-            onClick={() => {
-              isFav ? remove_from_fav() : add_to_fav();
-            }}
+            onClick={toggleFavourite}
             className="absolute top-5 right-5 w-12 h-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:scale-110 transition-all duration-300"
           >
             {loading ? (
