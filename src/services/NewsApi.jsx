@@ -1,10 +1,11 @@
 import axios from 'axios';
 
-const API_KEY = import.meta.env.VITE_NEWS_API_KEY;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
 const API = axios.create({
-  baseURL: 'https://newsapi.org/v2',
+  baseURL: `${BASE_URL}/api/v1`,
   headers: {
-    Authorization: API_KEY,
+    'Content-Type': 'application/json',
   },
 });
 

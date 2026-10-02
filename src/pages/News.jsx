@@ -33,12 +33,12 @@ function News() {
         setLoading(true);
 
         const resp = await API.get(
-          `/top-headlines?country=us&category=${newsID}&sortBy=publishedAt`,
+          `/news/top-headlines?country=us&category=${encodeURIComponent(newsID.toLowerCase())}`,
         );
 
-        const d = resp.data;
+        const d = resp.data?.data || resp.data;
 
-        if (d.status === 'ok') {
+        if (d.status === 'ok' || resp.data?.success) {
           setNews(d.articles || []);
         }
       } catch (error) {

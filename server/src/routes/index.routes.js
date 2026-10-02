@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import newsRouter from './news.routes.js';
 
 const router = Router();
 
@@ -30,5 +31,11 @@ router.get('/health', (req, res) => {
     }
   });
 });
+
+/**
+ * News routes
+ * Mounts under /api/v1/news
+ */
+router.use('/news', newsRouter);
 
 export default router;

@@ -6,8 +6,6 @@ import { auth } from '../../firebase/firebase.config';
 import { onAuthStateChanged } from 'firebase/auth';
 import API from '../services/NewsApi.jsx';
 
-const API_KEY = import.meta.env.VITE_NEWS_API_KEY;
-
 function NewsBox() {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,12 +21,12 @@ function NewsBox() {
     try {
       setLoading(true);
 
-      const resp = await API.get(`/everything?q=${text}&sortBy=publishedAt`);
+      const resp = await API.get(`/news/search?q=${encodeURIComponent(text)}`);
 
-      const data = resp.data;
+      const data = resp.data?.data || resp.data;
 
-      if (data.status === 'ok') {
-        setNews(data.articles);
+      if (data.status === 'ok' || resp.data?.success) {
+        setNews(data.articles || []);
       }
     } catch (error) {
       console.log(error);
@@ -47,14 +45,12 @@ function NewsBox() {
       });
 
       try {
-        const resp = await API.get(
-          `/top-headlines?country=us&sortBy=publishedAt`,
-        );
+        const resp = await API.get('/news/top-headlines?country=us');
 
-        const data = resp.data;
+        const data = resp.data?.data || resp.data;
 
-        if (data.status === 'ok') {
-          setNews(data.articles);
+        if (data.status === 'ok' || resp.data?.success) {
+          setNews(data.articles || []);
         }
       } catch (error) {
         console.log(error);
