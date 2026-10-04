@@ -5,9 +5,10 @@ import { auth } from '../../firebase/firebase.config';
 
 import { toast } from 'react-toastify';
 
-import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 import { Eye, EyeOff, Mail, Lock, Newspaper, Loader2 } from 'lucide-react';
+import { useFavourites } from '../hooks/useFavourites';
 
 function LoginPage() {
   const [data, setData] = useState({
@@ -16,15 +17,18 @@ function LoginPage() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const [showPassword, setShowPassword] = useState(false);
 
   const router = useNavigate();
+  const { user, authLoading } = useFavourites();
 
-  async function login() {
+  async function login(event) {
+    event.preventDefault();
+    setFormError('');
     if (!data.email || !data.password) {
-      toast.error('Please fill all the fields');
-
+      setFormError('Enter your email address and password to continue.');
       return;
     }
 
@@ -37,21 +41,18 @@ function LoginPage() {
 
       router('/');
     } catch (error) {
-      toast.error(error.message);
+      const message = error.code === 'auth/too-many-requests'
+        ? 'Too many attempts. Please wait a moment and try again.'
+        : 'We couldn’t sign you in with those details. Check them and try again.';
+      setFormError(message);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    if (loading) return;
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) router('/', { replace: true });
-    });
-
-    return () => unsubscribe();
-  }, [loading, router]);
+    if (!authLoading && user) router('/', { replace: true });
+  }, [authLoading, router, user]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-zinc-900 to-gray-950 flex items-center justify-center px-4 py-10">
@@ -60,7 +61,8 @@ function LoginPage() {
         <div className="relative hidden lg:flex flex-col justify-between p-10 overflow-hidden">
           <img
             src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1200&auto=format&fit=crop"
-            alt="news"
+            alt=""
+            aria-hidden="true"
             className="absolute inset-0 w-full h-full object-cover"
           />
 
@@ -117,9 +119,10 @@ function LoginPage() {
             </p>
           </div>
 
+          <form onSubmit={login} aria-busy={loading}>
           {/* Email */}
           <div className="mb-6">
-            <label className="text-sm text-zinc-300 mb-3 block font-medium">
+            <label htmlFor="login-email" className="text-sm text-zinc-300 mb-3 block font-medium">
               Email Address
             </label>
 
@@ -130,14 +133,17 @@ function LoginPage() {
               />
 
               <input
+                id="login-email"
                 value={data.email}
-                onChange={(e) =>
-                  setData({
-                    ...data,
-                    email: e.target.value,
-                  })
-                }
+                onChange={(event) => {
+                  setFormError('');
+                  setData((current) => ({ ...current, email: event.target.value }));
+                }}
                 type="email"
+                autoComplete="email"
+                required
+                aria-invalid={Boolean(formError)}
+                aria-describedby={formError ? 'login-error' : undefined}
                 placeholder="Enter your email"
                 className="w-full bg-white/5 border border-white/10 focus:border-cyan-400 outline-none rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-500 transition-all duration-300"
               />
@@ -146,7 +152,7 @@ function LoginPage() {
 
           {/* Password */}
           <div className="mb-8">
-            <label className="text-sm text-zinc-300 mb-3 block font-medium">
+            <label htmlFor="login-password" className="text-sm text-zinc-300 mb-3 block font-medium">
               Password
             </label>
 
@@ -157,14 +163,17 @@ function LoginPage() {
               />
 
               <input
+                id="login-password"
                 value={data.password}
-                onChange={(e) =>
-                  setData({
-                    ...data,
-                    password: e.target.value,
-                  })
-                }
+                onChange={(event) => {
+                  setFormError('');
+                  setData((current) => ({ ...current, password: event.target.value }));
+                }}
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                required
+                aria-invalid={Boolean(formError)}
+                aria-describedby={formError ? 'login-error' : undefined}
                 placeholder="Enter your password"
                 className="w-full bg-white/5 border border-white/10 focus:border-cyan-400 outline-none rounded-2xl py-4 pl-12 pr-14 text-white placeholder:text-zinc-500 transition-all duration-300"
               />
@@ -172,20 +181,22 @@ function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-cyan-300 transition-all duration-300"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                className="absolute right-2 top-1/2 inline-flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-lg text-zinc-300 hover:text-cyan-200 transition-all duration-300"
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
 
+          {formError && <p id="login-error" role="alert" className="mb-4 text-sm text-red-300">{formError}</p>}
+
           {/* Login Button */}
           <button
+            type="submit"
             disabled={loading}
-            onClick={() => {
-              login();
-            }}
-            className="w-full bg-gradient-to-r from-blue-500 to-cyan-400 hover:scale-[1.02] transition-all duration-300 py-4 rounded-2xl text-white font-semibold shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-3"
+            className="flex min-h-12 w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-400 py-4 font-semibold text-white shadow-lg shadow-cyan-500/20 transition-transform hover:scale-[1.02] disabled:cursor-wait disabled:opacity-70"
           >
             {loading ? (
               <>
@@ -196,6 +207,7 @@ function LoginPage() {
               'Sign In'
             )}
           </button>
+          </form>
 
           {/* Register */}
           <div className="mt-8 text-center">

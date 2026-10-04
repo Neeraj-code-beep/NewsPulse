@@ -81,8 +81,8 @@ function AboutPage() {
 
           <img
             src="https://images.unsplash.com/photo-1495020689067-958852a7765e?q=80&w=1200&auto=format&fit=crop"
-            alt="About Us"
-            loading="lazy"
+            alt="Newspapers spread across a table"
+            decoding="async"
             className="relative z-10 rounded-3xl shadow-2xl border border-white/10 object-cover w-full h-[500px]"
           />
 

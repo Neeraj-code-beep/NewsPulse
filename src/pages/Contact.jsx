@@ -49,12 +49,16 @@ const Contact = () => {
         </h2>
 
         <div className="input-box mb-4">
-          <label className="block mb-2 font-medium text-gray-700">
+          <label htmlFor="contact-name" className="block mb-2 font-medium text-gray-700">
             Full Name
           </label>
 
           <input
+            id="contact-name"
             type="text"
+            autoComplete="name"
+            aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? 'contact-name-error' : undefined}
             className="field w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-black"
             placeholder="Enter your name"
             {...register('name', {
@@ -63,15 +67,19 @@ const Contact = () => {
           />
 
           {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+            <p id="contact-name-error" role="alert" className="text-red-700 text-sm mt-1">{errors.name.message}</p>
           )}
         </div>
 
         <div className="input-box mb-4">
-          <label className="block mb-2 font-medium text-gray-700">Email</label>
+          <label htmlFor="contact-email" className="block mb-2 font-medium text-gray-700">Email</label>
 
           <input
+            id="contact-email"
             type="email"
+            autoComplete="email"
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? 'contact-email-error' : undefined}
             className="field w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-black"
             placeholder="Enter your email"
             {...register('email', {
@@ -84,17 +92,20 @@ const Contact = () => {
           />
 
           {errors.email && (
-            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+            <p id="contact-email-error" role="alert" className="text-red-700 text-sm mt-1">{errors.email.message}</p>
           )}
         </div>
 
         <div className="input-box mb-6">
-          <label className="block mb-2 font-medium text-gray-700">
+          <label htmlFor="contact-message" className="block mb-2 font-medium text-gray-700">
             Your Message
           </label>
 
           <textarea
+            id="contact-message"
             rows={5}
+            aria-invalid={Boolean(errors.message)}
+            aria-describedby={errors.message ? 'contact-message-error' : undefined}
             className="field mess w-full border border-gray-300 rounded-lg px-4 py-3 outline-none resize-none focus:ring-2 focus:ring-black"
             placeholder="Enter your message"
             {...register('message', {
@@ -107,7 +118,7 @@ const Contact = () => {
           ></textarea>
 
           {errors.message && (
-            <p className="text-red-500 text-sm mt-1">
+            <p id="contact-message-error" role="alert" className="text-red-700 text-sm mt-1">
               {errors.message.message}
             </p>
           )}
@@ -116,7 +127,8 @@ const Contact = () => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition duration-300 disabled:opacity-60"
+          aria-busy={isSubmitting}
+          className="min-h-12 w-full rounded-lg bg-black py-3 font-semibold text-white transition duration-300 hover:bg-gray-800 disabled:opacity-60"
         >
           {isSubmitting ? 'Sending...' : 'Send Message'}
         </button>

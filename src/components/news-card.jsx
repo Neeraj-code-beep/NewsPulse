@@ -44,11 +44,12 @@ function NewsCard({ news }) {
       <div className="relative overflow-hidden">
         <img
           loading="lazy"
+          decoding="async"
           src={
             news?.urlToImage ||
             'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1200&auto=format&fit=crop'
           }
-          alt={news?.title}
+          alt={news?.title ? `Article image: ${news.title}` : ''}
           className="w-full h-72 object-cover group-hover:scale-105 transition-all duration-700"
         />
 
@@ -65,14 +66,19 @@ function NewsCard({ news }) {
         {/* Favourite Button */}
         {user && (
           <button
+            type="button"
             disabled={loading}
             onClick={toggleFavourite}
-            className="absolute top-5 right-5 w-12 h-12 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:scale-110 transition-all duration-300"
+            aria-label={`${isFav ? 'Remove' : 'Add'} ${news?.title || 'article'} ${isFav ? 'from' : 'to'} favourites`}
+            aria-pressed={isFav}
+            aria-busy={loading}
+            className="absolute right-5 top-5 inline-flex min-h-12 min-w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/50 backdrop-blur-xl transition-transform hover:scale-105"
           >
             {loading ? (
               <Loader2 className="animate-spin text-cyan-300" size={20} />
             ) : (
               <Heart
+                aria-hidden="true"
                 size={22}
                 className={`transition-all duration-300 ${
                   isFav
@@ -101,7 +107,7 @@ function NewsCard({ news }) {
         <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-white/10 border border-white/10 flex items-center justify-center">
-              <User size={18} className="text-cyan-300" />
+              <User size={18} className="text-cyan-300" aria-hidden="true" />
             </div>
 
             <div>
@@ -110,7 +116,7 @@ function NewsCard({ news }) {
               </p>
 
               <div className="flex items-center gap-2 text-xs text-zinc-500 mt-1">
-                <CalendarDays size={13} />
+                <CalendarDays size={13} aria-hidden="true" />
                 <span>{convertISOStringToReadableTime(news?.publishedAt)}</span>
               </div>
             </div>
@@ -121,12 +127,13 @@ function NewsCard({ news }) {
         <a
           href={news?.url}
           target="_blank"
-          rel="noreferrer"
-          className="group/link inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-400 hover:scale-105 transition-all duration-300 px-6 py-3 rounded-2xl font-semibold shadow-lg shadow-cyan-500/20"
+          className="group/link inline-flex min-h-12 items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-400 px-6 py-3 font-semibold shadow-lg shadow-cyan-500/20 transition-transform hover:scale-[1.02]"
+          rel="noopener noreferrer"
         >
           Read Full Article
           <ExternalLink
             size={18}
+            aria-hidden="true"
             className="group-hover/link:translate-x-1 transition-all duration-300"
           />
         </a>

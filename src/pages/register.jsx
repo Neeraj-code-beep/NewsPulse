@@ -7,12 +7,12 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
-  onAuthStateChanged,
   updateProfile,
 } from 'firebase/auth';
 import { auth } from '../../firebase/firebase.config';
 import { toast } from 'react-toastify';
 import { Loader2 } from 'lucide-react';
+import { useFavourites } from '../hooks/useFavourites';
 
 const regSchema = z
   .object({
@@ -36,6 +36,9 @@ const regSchema = z
 
 function RegisterPage() {
   const router = useNavigate();
+  const { user, authLoading } = useFavourites();
+  const [formError, setFormError] = React.useState('');
+  const [googleLoading, setGoogleLoading] = React.useState(false);
 
   const {
     register,
@@ -68,23 +71,20 @@ function RegisterPage() {
       });
 
       toast.success('Account created successfully');
+      reset();
+      clearErrors();
 
       router('/');
     } catch (error) {
-      console.log(error);
-
+      setFormError('We couldn’t create your account. Check your details and try again.');
       if (error.code === 'auth/email-already-in-use') {
-        toast.error('Email already registered');
-      } else {
-        toast.error(error.message || 'Registration failed');
+        setFormError('That email address is already registered. Try signing in instead.');
       }
-    } finally {
-      reset();
-      clearErrors();
     }
   }
 
   async function sign_with_google() {
+    setGoogleLoading(true);
     try {
       const provider = new GoogleAuthProvider();
 
@@ -99,21 +99,16 @@ function RegisterPage() {
       toast.success('Logged in successfully');
 
       router('/');
-    } catch (error) {
-      console.log(error);
-      toast.error(error.message || 'Google sign in failed');
+    } catch {
+      toast.error('Google sign in could not be completed. Please try again.');
+    } finally {
+      setGoogleLoading(false);
     }
   }
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        router('/');
-      }
-    });
-
-    return () => unsub();
-  }, [router]);
+    if (!authLoading && user) router('/', { replace: true });
+  }, [authLoading, router, user]);
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
@@ -163,12 +158,16 @@ function RegisterPage() {
           <button
             type="button"
             onClick={sign_with_google}
-            className="mt-8 w-full border border-gray-300 rounded-xl p-3 flex items-center justify-center gap-3 hover:bg-gray-50 transition"
+            disabled={googleLoading || isSubmitting}
+            aria-busy={googleLoading}
+            className="mt-8 flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border border-gray-300 p-3 transition hover:bg-gray-50 disabled:opacity-60"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 512 512"
               className="w-5 h-5"
+              aria-hidden="true"
+              focusable="false"
             >
               <path
                 fill="#fbbb00"
@@ -189,7 +188,7 @@ function RegisterPage() {
             </svg>
 
             <span className="font-medium text-gray-700">
-              Continue with Google
+              {googleLoading ? 'Signing in with Google…' : 'Continue with Google'}
             </span>
           </button>
 
@@ -202,76 +201,93 @@ function RegisterPage() {
           </div>
 
           {/* FORM */}
-          <form onSubmit={handleSubmit(handleRegister)} className="space-y-5">
+          <form onSubmit={handleSubmit(handleRegister)} aria-busy={isSubmitting} className="space-y-5">
+            {formError && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>}
             <div>
-              <label className="text-sm font-medium text-gray-700">
+              <label htmlFor="register-name" className="text-sm font-medium text-gray-700">
                 Full Name
               </label>
 
               <input
+                id="register-name"
                 type="text"
-                {...register('name')}
+                autoComplete="name"
+                aria-invalid={Boolean(errors.name)}
+                aria-describedby={errors.name ? 'register-name-error' : undefined}
+                {...register('name', { onChange: () => setFormError('') })}
                 placeholder="Enter your name"
                 className="mt-2 w-full rounded-xl border border-gray-300 p-3 outline-none focus:ring-2 focus:ring-black"
               />
 
               {errors.name && (
-                <p className="text-red-500 text-sm mt-1">
+                <p id="register-name-error" role="alert" className="text-red-700 text-sm mt-1">
                   {errors.name.message}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700">Email</label>
+              <label htmlFor="register-email" className="text-sm font-medium text-gray-700">Email</label>
 
               <input
+                id="register-email"
                 type="email"
-                {...register('email')}
+                autoComplete="email"
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? 'register-email-error' : undefined}
+                {...register('email', { onChange: () => setFormError('') })}
                 placeholder="Enter your email"
                 className="mt-2 w-full rounded-xl border border-gray-300 p-3 outline-none focus:ring-2 focus:ring-black"
               />
 
               {errors.email && (
-                <p className="text-red-500 text-sm mt-1">
+                <p id="register-email-error" role="alert" className="text-red-700 text-sm mt-1">
                   {errors.email.message}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700">
+              <label htmlFor="register-password" className="text-sm font-medium text-gray-700">
                 Password
               </label>
 
               <input
+                id="register-password"
                 type="password"
-                {...register('password')}
+                autoComplete="new-password"
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={errors.password ? 'register-password-error' : undefined}
+                {...register('password', { onChange: () => setFormError('') })}
                 placeholder="Enter password"
                 className="mt-2 w-full rounded-xl border border-gray-300 p-3 outline-none focus:ring-2 focus:ring-black"
               />
 
               {errors.password && (
-                <p className="text-red-500 text-sm mt-1">
+                <p id="register-password-error" role="alert" className="text-red-700 text-sm mt-1">
                   {errors.password.message}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700">
+              <label htmlFor="register-confirm-password" className="text-sm font-medium text-gray-700">
                 Confirm Password
               </label>
 
               <input
+                id="register-confirm-password"
                 type="password"
-                {...register('confirmPassword')}
+                autoComplete="new-password"
+                aria-invalid={Boolean(errors.confirmPassword)}
+                aria-describedby={errors.confirmPassword ? 'register-confirm-password-error' : undefined}
+                {...register('confirmPassword', { onChange: () => setFormError('') })}
                 placeholder="Confirm password"
                 className="mt-2 w-full rounded-xl border border-gray-300 p-3 outline-none focus:ring-2 focus:ring-black"
               />
 
               {errors.confirmPassword && (
-                <p className="text-red-500 text-sm mt-1">
+                <p id="register-confirm-password-error" role="alert" className="text-red-700 text-sm mt-1">
                   {errors.confirmPassword.message}
                 </p>
               )}
@@ -279,8 +295,8 @@ function RegisterPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-black hover:bg-gray-800 transition text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2"
+              disabled={isSubmitting || googleLoading}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-black py-3 font-semibold text-white transition hover:bg-gray-800 disabled:opacity-60"
             >
               {isSubmitting ? (
                 <>

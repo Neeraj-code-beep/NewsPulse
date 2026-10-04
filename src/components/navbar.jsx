@@ -1,165 +1,160 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/firebase.config';
 import { toast } from 'react-toastify';
-import { LogOut, Plus } from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
 import { confirmAlert } from 'react-confirm-alert';
 import 'react-confirm-alert/src/react-confirm-alert.css';
+import { useFavourites } from '../hooks/useFavourites';
 
 function Navbar() {
-  const pathname = useLocation();
-  const router = useNavigate();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { user, authLoading } = useFavourites();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef(null);
+  const isLoggedIn = Boolean(user);
 
   async function logout() {
     try {
       await signOut(auth);
+      setMenuOpen(false);
       toast.success('Logged out successfully');
-      router('/', { replace: true });
-    } catch (error) {
+      navigate('/', { replace: true });
+    } catch {
       toast.warn('Failed to logout');
     }
   }
 
-  const active =
-    'bg-blue-700 text-white hover:bg-blue-600  rounded md:bg-transparent md:text-blue-700';
-
-  const [loggedin, setLoggedIn] = useState(false);
+  function confirmLogout() {
+    confirmAlert({
+      title: 'Logout',
+      message: 'Are you sure you want to logout?',
+      buttons: [
+        { label: 'Yes', onClick: logout },
+        { label: 'No', onClick: () => {} }
+      ]
+    });
+  }
 
   useEffect(() => {
-    // Remove the legacy serialized Firebase user object; Firebase owns auth persistence.
-    localStorage.removeItem('user');
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setLoggedIn(Boolean(user));
-    });
+    setMenuOpen(false);
+  }, [pathname]);
 
-    return () => unsubscribe();
+  useEffect(() => {
+    localStorage.removeItem('user');
   }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [menuOpen]);
+
+  const links = [
+    { to: '/', label: 'Home' },
+    { to: '/about', label: 'About' },
+    { to: '/favourites', label: 'Favourites' },
+    ...(!authLoading && !isLoggedIn
+      ? [{ to: '/login', label: 'Login' }, { to: '/register', label: 'Register' }]
+      : []),
+    { to: '/contact', label: 'Contact' }
+  ];
+
+  const linkClass = (to, mobile = false) => {
+    const active = pathname === to;
+    return `${mobile ? 'block min-h-12 w-full px-4 py-3' : 'inline-flex min-h-11 items-center px-4 py-2'} rounded-xl font-medium transition-colors ${
+      active
+        ? 'bg-cyan-400/15 text-cyan-200'
+        : 'text-zinc-300 hover:bg-white/10 hover:text-white'
+    }`;
+  };
+
   return (
-    <nav className="bg-gradient-to-r from-black via-zinc-900 to-gray-950 border-b border-white/10 sticky top-0 z-50 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
+    <nav aria-label="Main navigation" className="sticky top-0 z-50 border-b border-white/10 bg-gradient-to-r from-black via-zinc-900 to-gray-950 backdrop-blur-xl">
+      <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
+        <div className="flex min-h-12 items-center justify-between gap-3">
+          <Link to="/" className="group flex shrink-0 items-center gap-2" aria-label="NewsPulse home">
             <img
               src="https://png.pngtree.com/png-vector/20221127/ourmid/pngtree-digital-media-play-button-gradient-color-hexagon-marketing-agency-mobile-app-png-image_6482499.png"
-              width={48}
-              height={48}
-              alt="logo"
-              loading="lazy"
-              className="group-hover:scale-110 transition-all duration-300"
+              width={44}
+              height={44}
+              alt=""
+              decoding="async"
+              className="transition-transform duration-300 group-hover:scale-105"
             />
-
-            <h1 className="text-2xl font-extrabold tracking-wide text-white">
-              News
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
-                Pulse
-              </span>
-            </h1>
+            <span className="text-xl font-extrabold tracking-wide text-white sm:text-2xl">
+              News<span className="bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">Pulse</span>
+            </span>
           </Link>
 
-          {/* Nav Links */}
-          <div className="flex items-center gap-3 md:gap-6">
-            <ul className="flex items-center gap-2 md:gap-5 text-sm md:text-base font-medium">
-              <li>
-                <Link
-                  to="/"
-                  className={`px-4 py-2 rounded-xl transition-all duration-300 ${
-                    pathname.pathname === '/'
-                      ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-lg shadow-cyan-500/20'
-                      : 'text-zinc-300 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  Home
-                </Link>
-              </li>
-
-              <li>
-                <Link
-                  to="/about"
-                  className={`px-4 py-2 rounded-xl transition-all duration-300 ${
-                    pathname.pathname === '/about'
-                      ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-lg shadow-cyan-500/20'
-                      : 'text-zinc-300 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  About
-                </Link>
-              </li>
-
-              {!loggedin && (
-                <>
-                  <li>
-                    <Link
-                      to="/login"
-                      className={`px-4 py-2 rounded-xl transition-all duration-300 ${
-                        pathname.pathname === '/login'
-                          ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-lg shadow-cyan-500/20'
-                          : 'text-zinc-300 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      Login
-                    </Link>
-                  </li>
-
-                  <li>
-                    <Link
-                      to="/register"
-                      className={`px-4 py-2 rounded-xl transition-all duration-300 ${
-                        pathname.pathname === '/register'
-                          ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-lg shadow-cyan-500/20'
-                          : 'text-zinc-300 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      Register
-                    </Link>
-                  </li>
-                </>
-              )}
-
-              <li>
-                <Link
-                  to="/contact"
-                  className={`px-4 py-2 rounded-xl transition-all duration-300 ${
-                    pathname.pathname === '/contact'
-                      ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-lg shadow-cyan-500/20'
-                      : 'text-zinc-300 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  Contact
-                </Link>
-              </li>
-
-              {loggedin && (
-                <li>
-                  <button
-                    onClick={() => {
-                      confirmAlert({
-                        title: 'Logout',
-                        message: 'Are you sure you want to logout?',
-                        buttons: [
-                          {
-                            label: 'Yes',
-                            onClick: () => {
-                              logout();
-                              setLoggedIn(false);
-                            },
-                          },
-                          {
-                            label: 'No',
-                            onClick: () => {},
-                          },
-                        ],
-                      });
-                    }}
-                    className="p-3 rounded-xl bg-white/5 border border-white/10 text-zinc-300 hover:text-red-400 hover:bg-red-500/10 transition-all duration-300"
-                  >
-                    <LogOut size={18} />
-                  </button>
-                </li>
-              )}
-            </ul>
+          <div className="hidden items-center gap-1 md:flex">
+            {links.map(({ to, label }) => (
+              <Link key={to} to={to} className={linkClass(to)} aria-current={pathname === to ? 'page' : undefined}>
+                {label}
+              </Link>
+            ))}
+            {isLoggedIn && (
+              <button
+                type="button"
+                onClick={confirmLogout}
+                aria-label="Log out"
+                className="ml-2 inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-300 transition-colors hover:bg-red-500/10 hover:text-red-300"
+              >
+                <LogOut size={18} aria-hidden="true" />
+              </button>
+            )}
           </div>
+
+          <button
+            ref={menuButtonRef}
+            type="button"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white md:hidden"
+            aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-navigation"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+          </button>
+        </div>
+
+        <div
+          id="mobile-navigation"
+          hidden={!menuOpen}
+          className="border-t border-white/10 pb-2 pt-3 md:hidden"
+        >
+            <div className="flex flex-col gap-1">
+              {links.map(({ to, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className={linkClass(to, true)}
+                  aria-current={pathname === to ? 'page' : undefined}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {label}
+                </Link>
+              ))}
+              {isLoggedIn && (
+                <button
+                  type="button"
+                  onClick={confirmLogout}
+                  className="flex min-h-11 w-full items-center gap-3 rounded-xl px-4 py-3 text-left font-medium text-zinc-300 hover:bg-red-500/10 hover:text-red-300"
+                >
+                  <LogOut size={18} aria-hidden="true" /> Log out
+                </button>
+              )}
+            </div>
         </div>
       </div>
     </nav>

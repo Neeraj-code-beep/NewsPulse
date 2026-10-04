@@ -26,13 +26,13 @@ function FavoriteBox() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <div className="flex items-center gap-2 text-cyan-300 mb-2">
-            <Sparkles size={16} />
+            <Sparkles size={16} aria-hidden="true" />
             <span className="uppercase tracking-[3px] text-sm font-semibold">
               Saved Articles
             </span>
           </div>
 
-          <h2 className="text-4xl font-extrabold">
+          <h2 className="text-3xl font-extrabold sm:text-4xl">
             My
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
               {' '}
@@ -42,7 +42,7 @@ function FavoriteBox() {
         </div>
 
         <div className="hidden md:flex w-14 h-14 rounded-2xl bg-white/5 border border-white/10 items-center justify-center">
-          <Heart className="text-red-400" />
+          <Heart className="text-red-400" aria-hidden="true" />
         </div>
       </div>
 
@@ -71,7 +71,7 @@ function FavoriteBox() {
 
           {!loading && !error && favourites.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Bookmark size={60} className="text-zinc-600 mb-5" />
+              <Bookmark size={60} className="text-zinc-600 mb-5" aria-hidden="true" />
 
               <h3 className="text-2xl font-bold mb-3">No favourites yet</h3>
 
@@ -98,7 +98,7 @@ function FavoriteBox() {
         </div>
       ) : (
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center">
-          <Heart size={55} className="mx-auto text-red-400 mb-5" />
+          <Heart size={55} className="mx-auto text-red-400 mb-5" aria-hidden="true" />
 
           <h3 className="text-2xl font-bold mb-3">Login Required</h3>
 
@@ -124,8 +124,15 @@ const ListItem = ({ art, loading, onRemove }) => {
   return (
     <li className="group bg-white/5 border border-white/10 hover:border-red-400/40 rounded-2xl p-5 flex items-start justify-between gap-5 hover:bg-white/10 transition-all duration-300">
       <div className="flex-1">
-        <h3 className="text-lg font-semibold text-white leading-relaxed group-hover:text-cyan-300 transition-all duration-300">
-          {art.title}
+        <h3 className="text-lg font-semibold leading-relaxed transition-all duration-300">
+          {art.url ? (
+            <a href={art.url} target="_blank" rel="noopener noreferrer" className="text-white hover:text-cyan-200">
+              {art.title || 'Untitled article'}
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          ) : (
+            <span className="text-white">{art.title || 'Untitled article'}</span>
+          )}
         </h3>
 
         {art.description && (
@@ -136,12 +143,15 @@ const ListItem = ({ art, loading, onRemove }) => {
       </div>
 
       <button
+        type="button"
         disabled={loading}
         onClick={onRemove}
-        className="bg-red-500/10 hover:bg-red-500 p-3 rounded-xl transition-all duration-300 group/button"
+        aria-label={`Remove ${art.title || 'article'} from favourites`}
+        aria-busy={loading}
+        className="inline-flex min-h-12 min-w-12 items-center justify-center rounded-xl bg-red-500/10 p-3 transition-all duration-300 group/button hover:bg-red-500 disabled:cursor-wait disabled:opacity-60"
       >
         {loading ? <Loader size={20} className="animate-spin text-red-400" /> : (
-          <Trash2 size={20} className="text-red-400 group-hover/button:text-white" />
+          <Trash2 size={20} className="text-red-400 group-hover/button:text-white" aria-hidden="true" />
         )}
       </button>
     </li>

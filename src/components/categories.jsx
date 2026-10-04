@@ -25,12 +25,12 @@ function Categories() {
             </span>
           </div>
 
-          <h1 className="text-4xl font-extrabold leading-tight text-white">
+          <h2 className="text-3xl font-extrabold leading-tight text-white sm:text-4xl">
             Main <br />
             <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
               Categories
             </span>
-          </h1>
+          </h2>
         </div>
 
         <div className="hidden md:flex items-center justify-center w-14 h-14 rounded-2xl border border-cyan-400/20 bg-white/5">

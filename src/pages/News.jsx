@@ -1,6 +1,6 @@
 import { ArrowLeft, Heart, Loader2, ExternalLink } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
   convertISOStringToReadableTime,
@@ -13,35 +13,40 @@ function News() {
   const { newsID } = useParams();
 
   const [news, setNews] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const navigate = useNavigate();
+  const [status, setStatus] = useState('loading');
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+
     const fetchNews = async () => {
       try {
-        setLoading(true);
-
-        const resp = await API.get(
+        const response = await API.get(
           `/news/top-headlines?country=us&category=${encodeURIComponent(newsID.toLowerCase())}`,
+          { signal: controller.signal }
         );
 
-        const d = resp.data?.data || resp.data;
+        if (!active) return;
+        const data = response.data?.data || response.data;
+        if (data.status !== 'ok' && !response.data?.success) throw new Error('Unexpected news response');
 
-        if (d.status === 'ok' || resp.data?.success) {
-          setNews(d.articles || []);
-        }
+        const articles = Array.isArray(data.articles) ? data.articles : [];
+        setNews(articles);
+        setStatus(articles.length ? 'success' : 'empty');
       } catch (error) {
-        console.log(error);
-        toast.error('Failed to fetch news');
-        navigate('/');
-      } finally {
-        setLoading(false);
+        if (!active || error.code === 'ERR_CANCELED' || error.name === 'CanceledError') return;
+        setNews([]);
+        setStatus('error');
       }
     };
 
     fetchNews();
-  }, [newsID, navigate]);
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [newsID, retryCount]);
 
   return (
     <div className="min-h-screen bg-black text-white px-4 py-6">
@@ -50,7 +55,7 @@ function News() {
           to="/"
           className="inline-flex items-center gap-2 text-cyan-400 font-medium hover:text-cyan-300 mb-8 transition"
         >
-          <ArrowLeft size={22} />
+          <ArrowLeft size={22} aria-hidden="true" />
           Back to Home
         </Link>
 
@@ -67,18 +72,26 @@ function News() {
           </h1>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center h-52">
-            <Loader2 size={50} className="animate-spin text-cyan-400" />
+        {status === 'loading' ? (
+          <div role="status" aria-live="polite" className="flex h-52 flex-col items-center justify-center gap-4">
+            <Loader2 size={44} className="animate-spin text-cyan-300" aria-hidden="true" />
+            <p className="text-zinc-300">Loading {newsID} headlines…</p>
           </div>
-        ) : news.length === 0 ? (
-          <div className="text-center text-gray-400 text-lg">
+        ) : status === 'error' ? (
+          <div role="alert" className="rounded-2xl border border-red-300/20 bg-red-950/30 px-5 py-8 text-center">
+            <p className="text-red-100">These headlines could not be loaded. Please try again.</p>
+            <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-4 min-h-11 rounded-xl border border-red-200/30 px-5 py-2 font-semibold text-white hover:bg-red-100/10">
+              Try again
+            </button>
+          </div>
+        ) : status === 'empty' ? (
+          <div className="py-10 text-center text-zinc-300" role="status">
             No news articles found.
           </div>
         ) : (
           <div className="space-y-6">
             {news.map((article, index) => (
-              <HorNewsCard key={index} article={article} />
+              <HorNewsCard key={article.id || createUniqueIdentifier(article)} article={article} loading={index > 0} />
             ))}
           </div>
         )}
@@ -89,7 +102,7 @@ function News() {
 
 export default News;
 
-function HorNewsCard({ article }) {
+function HorNewsCard({ article, loading: lazyLoadImage }) {
   const [loading, setLoading] = useState(false);
   const { user, favourites, addFavourite, removeFavourite } = useFavourites();
   const articleId = createUniqueIdentifier(article);
@@ -107,7 +120,7 @@ function HorNewsCard({ article }) {
       await addFavourite(article);
 
       toast.success('Added to favourites');
-    } catch (error) {
+    } catch {
       toast.error('Something went wrong');
     } finally {
       setLoading(false);
@@ -121,7 +134,7 @@ function HorNewsCard({ article }) {
       await removeFavourite(article);
 
       toast.success('Removed from favourites');
-    } catch (error) {
+    } catch {
       toast.error('Something went wrong');
     } finally {
       setLoading(false);
@@ -137,22 +150,29 @@ function HorNewsCard({ article }) {
               article?.urlToImage ||
               'https://via.placeholder.com/400x250?text=No+Image'
             }
-            alt={article?.title}
-            className="w-full h-full object-cover lg:h-[320px] hover:scale-105 transition duration-500"
+            alt={article?.title || ''}
+            loading={lazyLoadImage ? 'lazy' : 'eager'}
+            decoding="async"
+            className="h-64 w-full object-cover transition duration-500 hover:scale-105 sm:h-72 lg:h-[320px]"
           />
         </div>
 
         <div className="flex-1 p-6 lg:p-8 relative">
           {user && (
             <button
+              type="button"
               disabled={loading}
               onClick={isFav ? remove_from_fav : add_to_fav}
+              aria-label={`${isFav ? 'Remove from' : 'Add to'} favourites: ${article?.title || 'article'}`}
+              aria-pressed={isFav}
+              aria-busy={loading}
               className="absolute top-5 right-5 h-12 w-12 rounded-full border border-white/10 bg-white/5 backdrop-blur-md flex items-center justify-center hover:scale-110 transition"
             >
               {loading ? (
                 <Loader2 size={22} className="animate-spin text-cyan-400" />
               ) : (
                 <Heart
+                  aria-hidden="true"
                   size={24}
                   className={`transition ${
                     isFav
@@ -189,11 +209,11 @@ function HorNewsCard({ article }) {
           <a
             href={article?.url}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold hover:scale-105 transition"
           >
             Read Full Article
-            <ExternalLink size={18} />
+            <ExternalLink size={18} aria-hidden="true" />
           </a>
         </div>
       </div>
