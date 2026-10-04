@@ -5,6 +5,18 @@ import { logger } from '../../utils/logger.js';
 const TIMEOUT_MS = 10000;
 
 class NewsApiClient {
+  constructor({
+    apiConfig = newsApiConfig,
+    fetchImpl = (...args) => fetch(...args),
+    timeoutMs = TIMEOUT_MS,
+    logger: clientLogger = logger
+  } = {}) {
+    this.apiConfig = apiConfig;
+    this.fetchImpl = fetchImpl;
+    this.timeoutMs = timeoutMs;
+    this.logger = clientLogger;
+  }
+
   /**
    * Fetches data from NewsAPI endpoint.
    * @param {string} endpoint - e.g. '/top-headlines' or '/everything'
@@ -12,9 +24,9 @@ class NewsApiClient {
    * @returns {Promise<Object>}
    */
   async request(endpoint, params = {}) {
-    newsApiConfig.validate();
+    this.apiConfig.validate();
 
-    const url = new URL(`${newsApiConfig.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`);
+    const url = new URL(`${this.apiConfig.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`);
 
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== '') {
@@ -23,13 +35,13 @@ class NewsApiClient {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      const response = await fetch(url.toString(), {
+      const response = await this.fetchImpl(url.toString(), {
         method: 'GET',
         headers: {
-          'X-Api-Key': newsApiConfig.apiKey,
+          'X-Api-Key': this.apiConfig.apiKey,
           Accept: 'application/json'
         },
         signal: controller.signal
@@ -39,7 +51,7 @@ class NewsApiClient {
 
       if (!response.ok) {
         const status = response.status;
-        logger.error(`NewsAPI request failed with HTTP ${status}`);
+        this.logger.error(`NewsAPI request failed with HTTP ${status}`);
 
         if (status === 401) {
           throw new AppError('News provider authentication failed.', 500, 'NEWS_PROVIDER_UNAUTHORIZED');
@@ -65,11 +77,11 @@ class NewsApiClient {
       }
 
       if (error.name === 'AbortError') {
-        logger.error('NewsAPI request timed out after 10000ms');
+        this.logger.error(`NewsAPI request timed out after ${this.timeoutMs}ms`);
         throw new AppError('News provider request timed out', 504, 'NEWS_PROVIDER_TIMEOUT');
       }
 
-      logger.error('NewsAPI network error');
+      this.logger.error('NewsAPI network error');
       throw new AppError('Failed to connect to news provider.', 502, 'NEWS_PROVIDER_UNAVAILABLE');
     } finally {
       clearTimeout(timeoutId);

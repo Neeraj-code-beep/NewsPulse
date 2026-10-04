@@ -4,7 +4,10 @@ import { generateArticleId } from '../utils/articleHash.js';
 import { logger } from '../utils/logger.js';
 
 class NewsService {
-  constructor() {
+  constructor({ client = newsApiClient, cache = cacheService, logger: serviceLogger = logger } = {}) {
+    this.client = client;
+    this.cache = cache;
+    this.logger = serviceLogger;
     this.inFlightRequests = new Map();
   }
 
@@ -85,7 +88,7 @@ class NewsService {
    */
   async executeWithCache(cacheKey, fetcher, page, pageSize) {
     // 1. Check cache
-    const cachedData = cacheService.get(cacheKey);
+    const cachedData = this.cache.get(cacheKey);
     if (cachedData) {
       return cachedData;
     }
@@ -102,7 +105,7 @@ class NewsService {
         const normalized = this.normalizeResponse(rawData, page, pageSize);
 
         // Cache successful response only
-        cacheService.set(cacheKey, normalized);
+        this.cache.set(cacheKey, normalized);
         return normalized;
       } finally {
         // Always cleanup in-flight map
@@ -134,7 +137,7 @@ class NewsService {
 
     return this.executeWithCache(
       cacheKey,
-      () => newsApiClient.getTopHeadlines(requestParams),
+      () => this.client.getTopHeadlines(requestParams),
       page,
       pageSize
     );
@@ -160,7 +163,7 @@ class NewsService {
 
     return this.executeWithCache(
       cacheKey,
-      () => newsApiClient.search(requestParams),
+      () => this.client.search(requestParams),
       page,
       pageSize
     );

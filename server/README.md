@@ -63,6 +63,16 @@ npm run dev
 npm start
 ```
 
+## Automated Tests
+
+Run the backend test suite from the repository root:
+
+```bash
+npm test --prefix server
+```
+
+The tests use Node's built-in test runner and do not require real NewsAPI credentials or Firebase credentials. Firebase token verification and NewsAPI requests are mocked; automated tests do not call external providers.
+
 ## API Endpoints
 
 Base URL: `http://localhost:5000/api/v1`
