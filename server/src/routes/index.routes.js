@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authRouter from './auth.routes.js';
 import newsRouter from './news.routes.js';
+import aiRouter from './ai.routes.js';
 
 const router = Router();
 
@@ -44,5 +45,8 @@ router.use('/news', newsRouter);
  * Mounts under /api/v1/auth
  */
 router.use('/auth', authRouter);
+
+/** AI routes */
+router.use('/ai', aiRouter);
 
 export default router;

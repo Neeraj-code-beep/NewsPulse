@@ -8,6 +8,7 @@ import {
 } from '../utils';
 import API from '../services/NewsApi.jsx';
 import { useFavourites } from '../hooks/useFavourites';
+import ArticleSummaryAction from '../components/ArticleSummaryAction';
 
 function News() {
   const { newsID } = useParams();
@@ -205,6 +206,8 @@ function HorNewsCard({ article, loading: lazyLoadImage }) {
           <p className="text-gray-300 leading-relaxed mb-6">
             {article?.description}
           </p>
+
+          <ArticleSummaryAction article={article} />
 
           <a
             href={article?.url}

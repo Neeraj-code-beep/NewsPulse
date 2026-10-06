@@ -4,6 +4,7 @@ import { Heart, CalendarDays, User, ExternalLink, Loader2 } from 'lucide-react';
 
 import { toast } from 'react-toastify';
 import { useFavourites } from '../hooks/useFavourites';
+import ArticleSummaryAction from './ArticleSummaryAction';
 
 import {
   convertISOStringToReadableTime,
@@ -102,6 +103,8 @@ function NewsCard({ news }) {
         <p className="text-zinc-400 leading-relaxed mb-6 line-clamp-3">
           {news?.description || 'No description available.'}
         </p>
+
+        <ArticleSummaryAction article={news} />
 
         {/* Author + Date */}
         <div className="flex items-center justify-between flex-wrap gap-4 mb-6">

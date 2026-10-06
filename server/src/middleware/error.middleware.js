@@ -3,13 +3,19 @@ import { logger } from '../utils/logger.js';
 import { config } from '../config/env.js';
 
 export const errorMiddleware = (err, req, res, next) => {
+  const isAiSummaryRequest = req.originalUrl.startsWith('/api/v1/ai/summarize');
+  const isOversizedAiBody = err.type === 'entity.too.large' && isAiSummaryRequest;
   const isMalformedJson = err instanceof SyntaxError
     && err.status === 400
     && Object.prototype.hasOwnProperty.call(err, 'body');
   const isAppError = err instanceof AppError;
-  const statusCode = isMalformedJson ? 400 : (isAppError && err.statusCode ? err.statusCode : (err.statusCode || 500));
-  const code = isMalformedJson ? 'VALIDATION_ERROR' : (isAppError && err.code ? err.code : (err.code || 'INTERNAL_ERROR'));
-  const message = isMalformedJson
+  const statusCode = isOversizedAiBody ? 413 : (isMalformedJson ? 400 : (isAppError && err.statusCode ? err.statusCode : (err.statusCode || 500)));
+  const code = isOversizedAiBody
+    ? 'AI_VALIDATION_ERROR'
+    : (isMalformedJson ? 'VALIDATION_ERROR' : (isAppError && err.code ? err.code : (err.code || 'INTERNAL_ERROR')));
+  const message = isOversizedAiBody
+    ? 'Article summary request is too large.'
+    : isMalformedJson
     ? 'Malformed JSON request body'
     : (isAppError || !config.isProduction ? (err.message || 'Something went wrong') : 'Something went wrong');
 
