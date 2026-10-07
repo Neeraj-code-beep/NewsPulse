@@ -66,6 +66,17 @@ test('NewsAPI route rejects invalid input without contacting a provider', async 
   });
 });
 
+test('related-news endpoint is publicly mounted and validates before provider access', async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/v1/news/related`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ article: {} })
+    });
+    const body = await response.json();
+    assert.equal(response.status, 400);
+    assert.equal(body.error.code, 'RECOMMENDATION_VALIDATION_ERROR');
+  });
+});
+
 test('app can be imported without binding the configured production port', () => {
   assert.equal(typeof app, 'function');
   assert.equal(typeof app.listen, 'function');

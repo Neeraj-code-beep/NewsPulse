@@ -5,6 +5,7 @@ import { Heart, CalendarDays, User, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useFavourites } from '../hooks/useFavourites';
 import ArticleSummaryAction from './ArticleSummaryAction';
+import RelatedNewsSection from './RelatedNewsSection';
 
 import {
   convertISOStringToReadableTime,
@@ -105,6 +106,7 @@ function NewsCard({ news }) {
         </p>
 
         <ArticleSummaryAction article={news} />
+        <RelatedNewsSection article={news} />
 
         {/* Author + Date */}
         <div className="flex items-center justify-between flex-wrap gap-4 mb-6">

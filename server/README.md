@@ -162,6 +162,30 @@ Successful responses return a normalized summary and whether it came from cache:
 
 Summaries are cached in the existing in-memory cache using a SHA-256 hash of normalized title, description, and bounded content. Successful concurrent requests for the same text share one generation. Cache entries expire using `AI_SUMMARY_CACHE_TTL_MS`; errors are not cached. The AI endpoint has an additional limit of 20 requests per IP per 15 minutes. Provider calls use the configured timeout and return safe application-level errors.
 
+### Related news recommendations
+- **URL**: `POST /api/v1/news/related`
+- **Authentication**: Not required. Recommendations are based on supplied article metadata, not a user profile.
+- **Request**: Send the current normalized NewsAPI article and optional `limit` from 1 through 10 (default 5). The server accepts only known article metadata fields, validates supplied URLs as HTTP(S), derives its own compact query, and never fetches the supplied article URL.
+
+```json
+{
+  "article": {
+    "id": "existing-deterministic-article-id",
+    "title": "Example article title",
+    "description": "A short description of the story.",
+    "content": "Optional article content.",
+    "source": { "name": "Example News" },
+    "url": "https://example.com/article",
+    "publishedAt": "2026-10-01T15:30:00.000Z"
+  },
+  "limit": 5
+}
+```
+
+The response is `{ "success": true, "data": { "articles": [...] } }`. Each returned normalized article includes its existing article ID and a rounded `score` between 0 and 1. The v1 deterministic content-based score weighs title overlap most heavily, followed by description, available content, and aggregate keyword overlap. Matching source and freshness are small capped additions; relevance carries substantially more weight than freshness. Candidates below the minimum score of `0.14` are omitted, so a successful empty result is expected when nothing is sufficiently related.
+
+Candidate articles are found through the existing NewsAPI service; recommendations do not call Gemini, use embeddings, vector search, or personalization. Results are cached in the existing process-local cache for the NewsAPI cache TTL with versioned `related:v1:<article-hash>:<limit>` keys. Concurrent identical recommendation requests share one generation. As with the existing in-memory cache, entries and in-flight coordination do not persist across restarts or synchronize between server instances. Results are limited by the provider candidate set and available article metadata; this initial lexical algorithm does not understand semantic relationships beyond token overlap.
+
 ### AI tests and provider verification
 AI service, route, validation, configuration, and provider adapter tests use deterministic mocks; tests do not call Gemini. Run all backend tests with `npm test` from `server/`. A live Gemini request requires a valid server-side `GEMINI_API_KEY`; it is not part of automated verification. No Gemini key was configured in the implementation environment, so live-provider verification was not executed.
 

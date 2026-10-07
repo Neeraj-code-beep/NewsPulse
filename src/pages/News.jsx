@@ -9,6 +9,7 @@ import {
 import API from '../services/NewsApi.jsx';
 import { useFavourites } from '../hooks/useFavourites';
 import ArticleSummaryAction from '../components/ArticleSummaryAction';
+import RelatedNewsSection from '../components/RelatedNewsSection';
 
 function News() {
   const { newsID } = useParams();
@@ -208,6 +209,7 @@ function HorNewsCard({ article, loading: lazyLoadImage }) {
           </p>
 
           <ArticleSummaryAction article={article} />
+          <RelatedNewsSection article={article} />
 
           <a
             href={article?.url}
