@@ -200,3 +200,37 @@ All errors follow a standardized format:
   }
 }
 ```
+### Real-time news updates
+The HTTP server created in `src/server.js` also hosts the Socket.IO v4 server. The Express app in `src/app.js` remains independently importable for REST tests. Socket.IO uses the same configured `CLIENT_URL` origin as Express CORS; live updates are public and do not require Firebase authentication.
+
+Clients receive the server-to-client `news:update` event. Its payload contains only newly detected articles and a fetch timestamp:
+
+```json
+{
+  "articles": [{
+    "title": "Article title",
+    "description": "Article description",
+    "url": "https://example.com/article",
+    "source": { "name": "Example Source" },
+    "publishedAt": "2026-10-07T10:00:00.000Z",
+    "image": "https://example.com/image.jpg",
+    "hash": "deterministic-article-hash"
+  }],
+  "fetchedAt": "2026-10-07T10:01:00.000Z"
+}
+```
+
+The process starts one shared poller when its first client connects and stops the interval when its final client disconnects. The first successful poll establishes a silent baseline; later polls emit new articles only. Polls use the existing NewsService and cache with a fixed US headlines query, bounded page size, and the NewsAPI provider timeout. The default poll interval is 15 minutes to avoid aggressive provider usage. Repeated polls that hit the existing REST cache may not see newer provider results until that cache expires.
+
+Configure the feature with:
+
+```env
+LIVE_NEWS_ENABLED=true
+LIVE_NEWS_POLL_INTERVAL_MS=900000
+LIVE_NEWS_PAGE_SIZE=20
+LIVE_NEWS_SEEN_LIMIT=500
+```
+
+The interval is accepted from 60 seconds through one hour, page size from 1 through 50, and seen-set capacity from 50 through 5,000; invalid values use safe defaults. The poller retains a bounded set of article hashes and URL fallbacks, and overlapping polls are skipped. The frontend uses one shared Socket.IO client with Socket.IO reconnection and displays updates as pending until the reader chooses to merge them into the main feed. Live updates are disabled while searching and are not attached to category pages.
+
+This is intentionally process-local: **one server process = one poller + one in-memory seen set**. State is reset on restart and does not synchronize between multiple backend instances. No Redis adapter or other distributed infrastructure is included. A multi-instance deployment will need future poller coordination and Socket.IO event synchronization.

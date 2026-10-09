@@ -3,6 +3,8 @@ import NewsCard from './news-card';
 import { Loader, Newspaper, Search, Sparkles } from 'lucide-react';
 import API from '../services/NewsApi.jsx';
 import { createUniqueIdentifier } from '../utils';
+import { useLiveNews } from '../hooks/useLiveNews.js';
+import { mergeLiveArticles } from '../utils/liveNews.js';
 
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -12,6 +14,17 @@ function NewsBox() {
   const [text, setText] = useState('');
   const [searchAttempt, setSearchAttempt] = useState(0);
   const immediateSearchRef = useRef(false);
+  const { connectionStatus, pendingArticles, takePendingArticles } = useLiveNews({
+    enabled: !text.trim(),
+    existingArticles: articles
+  });
+
+  function showPendingStories() {
+    const updates = takePendingArticles();
+    if (!updates.length) return;
+    setArticles((current) => mergeLiveArticles(current, updates));
+    setStatus('success');
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -126,6 +139,20 @@ function NewsBox() {
           </button>
         </div>
       </form>
+
+      {!text.trim() && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm" aria-live="polite">
+          <span className="inline-flex items-center gap-2 text-zinc-300">
+            <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${connectionStatus === 'connected' ? 'bg-emerald-400' : connectionStatus === 'connecting' ? 'animate-pulse bg-amber-300' : 'bg-zinc-500'}`} />
+            <span>{connectionStatus === 'connected' ? 'Live updates connected' : connectionStatus === 'connecting' ? 'Connecting to live updates…' : 'Live updates disconnected'}</span>
+          </span>
+          {pendingArticles.length > 0 && (
+            <button type="button" onClick={showPendingStories} className="min-h-11 rounded-lg border border-cyan-300/30 px-3 py-2 font-semibold text-cyan-100 hover:bg-cyan-400/10">
+              View {pendingArticles.length} new {pendingArticles.length === 1 ? 'story' : 'stories'}
+            </button>
+          )}
+        </div>
+      )}
 
       {status === 'loading' && (
         <div role="status" aria-live="polite" className="flex flex-col items-center justify-center py-16">
