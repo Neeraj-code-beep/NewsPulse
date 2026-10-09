@@ -22,9 +22,6 @@ A responsive React + Vite news application backed by an Express API, Firebase Au
 - **Node.js + Express** – API gateway and server-side provider integrations
 - **Firebase** – Authentication and per-user Firestore favourites
 - **Socket.IO** – Process-local live headline updates
-- **Node.js + Express** – API gateway and server-side provider integrations
-- **Firebase** – Authentication and per-user Firestore favourites
-- **Socket.IO** – Process-local live headline updates
 
 ---
 
