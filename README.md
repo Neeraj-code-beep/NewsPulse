@@ -1,7 +1,6 @@
 # 📰 News Application
 
-A modern, responsive **React + Vite** application to explore the latest news.  
-This was built as a **University project** and demonstrates a clean UI, API integration, and deployment workflow.
+A responsive React + Vite news application backed by an Express API, Firebase Authentication/Firestore, NewsAPI, Gemini summaries, related-news recommendations, and Socket.IO live updates.
 
 
 ---
@@ -12,7 +11,6 @@ This was built as a **University project** and demonstrates a clean UI, API inte
 - Responsive design (mobile & desktop)  
 - Fast builds & hot reload with **Vite**  
 - Clean codebase with **ESLint** rules  
-- Deployed on **Vercel**  
 
 ---
 
@@ -21,7 +19,12 @@ This was built as a **University project** and demonstrates a clean UI, API inte
 - **React 18 + Vite** – Frontend framework & bundler  
 - **Tailwind CSS** – Utility-first styling  
 - **ESLint** – Code linting  
-- **Vercel** – Hosting & deployment  
+- **Node.js + Express** – API gateway and server-side provider integrations
+- **Firebase** – Authentication and per-user Firestore favourites
+- **Socket.IO** – Process-local live headline updates
+- **Node.js + Express** – API gateway and server-side provider integrations
+- **Firebase** – Authentication and per-user Firestore favourites
+- **Socket.IO** – Process-local live headline updates
 
 ---
 
@@ -29,7 +32,7 @@ This was built as a **University project** and demonstrates a clean UI, API inte
 
 ### Prerequisites
 
-- Node.js v16+  
+- Node.js v20+ (required by the backend and Google GenAI SDK)
 - npm or yarn  
 
 ### Installation
@@ -65,6 +68,8 @@ news-application/
 
 ## Configuration
 
+The frontend reads its Vite settings from a root `.env` file. Copy `.env.example` to `.env` and configure the Firebase web-app settings and backend URL. Firebase web configuration is public client configuration; never put NewsAPI, Gemini, or Firebase Admin credentials in frontend variables.
+
 ```bash
 VITE_API_BASE_URL=http://localhost:5000
 VITE_FIREBASE_API_KEY=
@@ -74,6 +79,8 @@ VITE_FIREBASE_STORAGE_BUCKET=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 ```
+
+Run the frontend with `npm run dev` from the repository root. Run the API in a second terminal with `cd server`, copy `server/.env.example` to `server/.env`, configure the server secrets, and run `npm start` (or `npm run dev` during development). Production configuration, health endpoints, proxy assumptions, Socket.IO/WSS, and process-local limits are documented in [server/README.md](server/README.md).
 
 ## Firestore bookmarks
 

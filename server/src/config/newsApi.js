@@ -2,9 +2,7 @@ import { config } from './env.js';
 import { AppError } from '../utils/errors.js';
 
 export const newsApiConfig = Object.freeze({
-  baseUrl: config.newsApi.baseUrl,
-  apiKey: config.newsApi.apiKey,
-  cacheTtlMs: config.newsApi.cacheTtlMs,
+  ...config.newsApi,
 
   validate() {
     if (!this.apiKey) {

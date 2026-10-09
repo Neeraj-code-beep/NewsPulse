@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import app from '../app.js';
 import { logger } from '../utils/logger.js';
+import { config } from '../config/env.js';
 
 logger.error = () => {};
 
@@ -23,6 +24,7 @@ test('API root and health routes return successful response envelopes', async ()
   await withServer(async (baseUrl) => {
     const rootResponse = await fetch(`${baseUrl}/api/v1`);
     assert.equal(rootResponse.status, 200);
+    assert.match(rootResponse.headers.get('x-request-id'), /^[0-9a-f-]{36}$/i);
     assert.deepEqual(await rootResponse.json(), {
       success: true,
       data: { name: 'NewsPulse API', version: 'v1' }
@@ -33,6 +35,24 @@ test('API root and health routes return successful response envelopes', async ()
     assert.equal(healthResponse.status, 200);
     assert.equal(health.success, true);
     assert.equal(health.data.status, 'ok');
+
+    const readinessResponse = await fetch(`${baseUrl}/api/v1/health/ready`);
+    const readiness = await readinessResponse.json();
+    assert.ok([200, 503].includes(readinessResponse.status));
+    assert.equal(readinessResponse.status === 200, Object.values(readiness.data?.checks || readiness.error?.details?.checks || {}).every(Boolean));
+  });
+});
+
+test('Express CORS permits only its configured frontend origin and Helmet headers remain active', async () => {
+  await withServer(async (baseUrl) => {
+    const allowed = await fetch(`${baseUrl}/api/v1`, { headers: { Origin: config.CLIENT_URL } });
+    assert.equal(allowed.headers.get('access-control-allow-origin'), config.CLIENT_URL);
+    assert.equal(allowed.headers.get('access-control-allow-credentials'), 'true');
+    assert.equal(allowed.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(allowed.headers.get('x-frame-options') !== null, true);
+
+    const denied = await fetch(`${baseUrl}/api/v1`, { headers: { Origin: 'https://untrusted.example' } });
+    assert.equal(denied.headers.get('access-control-allow-origin'), null);
   });
 });
 
@@ -53,6 +73,30 @@ test('unknown API routes return the standard not-found error envelope', async ()
     assert.equal(response.status, 404);
     assert.equal(body.success, false);
     assert.equal(body.error.code, 'NOT_FOUND');
+    assert.equal(body.error.requestId, response.headers.get('x-request-id'));
+  });
+});
+
+test('global JSON request limit returns a safe 413 response with a request ID', async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/v1/news/related`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ article: 'x'.repeat(70_000) })
+    });
+    const body = await response.json();
+    assert.equal(response.status, 413);
+    assert.equal(body.error.code, 'PAYLOAD_TOO_LARGE');
+    assert.equal(body.error.requestId, response.headers.get('x-request-id'));
+  });
+});
+
+test('query parser rejects excessive parameter counts instead of silently truncating', async () => {
+  await withServer(async (baseUrl) => {
+    const query = new URLSearchParams(Array.from({ length: 51 }, (_, index) => [`extra${index}`, '1']));
+    const response = await fetch(`${baseUrl}/api/v1/news/top-headlines?${query}`);
+    const body = await response.json();
+    assert.equal(response.status, 400);
+    assert.equal(body.error.code, 'VALIDATION_ERROR');
   });
 });
 

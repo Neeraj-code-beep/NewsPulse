@@ -26,6 +26,8 @@ test('Socket.IO uses the configured origin and counts client lifecycle safely', 
   });
   assert.equal(typeof socketServer.io.engine.opts.cors.origin, 'function');
   assert.equal(socketServer.io.engine.opts.cors.credentials, true);
+  assert.equal(socketServer.io.engine.opts.maxHttpBufferSize, 16 * 1024);
+  assert.equal(socketServer.io.engine.opts.perMessageDeflate, false);
   await new Promise((resolve, reject) => socketServer.io.engine.opts.cors.origin('http://localhost:5173', (error, origin) => {
     if (error) return reject(error);
     assert.equal(origin, 'http://localhost:5173');

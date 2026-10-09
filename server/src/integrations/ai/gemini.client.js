@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
-import { getAIConfig, requireGeminiApiKey } from '../../config/ai.js';
+import { config } from '../../config/env.js';
+import { requireGeminiApiKey } from '../../config/ai.js';
 import { AppError } from '../../utils/errors.js';
 
 const SYSTEM_INSTRUCTION = [
@@ -22,7 +23,7 @@ const timeoutError = () => new AppError(
 );
 
 export class GeminiClient {
-  constructor({ configProvider = getAIConfig, GoogleGenAI: GenAI = GoogleGenAI } = {}) {
+  constructor({ configProvider = () => config.ai, GoogleGenAI: GenAI = GoogleGenAI } = {}) {
     this.configProvider = configProvider;
     this.GenAI = GenAI;
   }

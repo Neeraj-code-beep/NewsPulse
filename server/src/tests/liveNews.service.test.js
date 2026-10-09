@@ -53,9 +53,9 @@ test('live news configuration uses conservative defaults and bounds custom value
     LIVE_NEWS_ENABLED: 'false', LIVE_NEWS_POLL_INTERVAL_MS: '120000',
     LIVE_NEWS_PAGE_SIZE: '10', LIVE_NEWS_SEEN_LIMIT: '100'
   }), testConfig({ enabled: false, pollIntervalMs: 120_000, pageSize: 10, seenLimit: 100 }));
-  assert.equal(getLiveNewsConfig({ LIVE_NEWS_POLL_INTERVAL_MS: '1000' }).pollIntervalMs, 900_000);
-  assert.equal(getLiveNewsConfig({ LIVE_NEWS_PAGE_SIZE: '1000' }).pageSize, 20);
-  assert.equal(getLiveNewsConfig({ LIVE_NEWS_SEEN_LIMIT: '-1' }).seenLimit, 500);
+  assert.throws(() => getLiveNewsConfig({ LIVE_NEWS_POLL_INTERVAL_MS: '1000' }), { code: 'CONFIGURATION_ERROR' });
+  assert.throws(() => getLiveNewsConfig({ LIVE_NEWS_PAGE_SIZE: '1000' }), { code: 'CONFIGURATION_ERROR' });
+  assert.throws(() => getLiveNewsConfig({ LIVE_NEWS_SEEN_LIMIT: '-1' }), { code: 'CONFIGURATION_ERROR' });
 });
 
 test('poller starts one interval and establishes a silent initial baseline', async () => {

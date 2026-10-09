@@ -9,6 +9,7 @@ export const createLiveNewsRuntime = (httpServer, {
   logger: runtimeLogger = logger
 } = {}) => {
   let hasConnectedClients = false;
+  let closePromise;
   const socketServer = createSocketServer(httpServer, {
     clientUrl,
     logger: runtimeLogger,
@@ -29,10 +30,13 @@ export const createLiveNewsRuntime = (httpServer, {
   return {
     ...socketServer,
     liveNews,
-    enabled: liveNews.config?.enabled ?? true,
+    enabled: liveNews.config?.enabled ?? appConfig.liveNews.enabled,
     close: () => {
-      liveNews.stop();
-      return socketServer.close();
+      if (!closePromise) {
+        liveNews.stop();
+        closePromise = socketServer.close();
+      }
+      return closePromise;
     }
   };
 };

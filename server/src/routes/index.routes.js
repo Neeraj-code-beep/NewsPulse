@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { config } from '../config/env.js';
 import authRouter from './auth.routes.js';
 import newsRouter from './news.routes.js';
 import aiRouter from './ai.routes.js';
@@ -32,6 +33,22 @@ router.get('/health', (req, res) => {
       timestamp: new Date().toISOString()
     }
   });
+});
+
+router.get('/health/ready', (req, res) => {
+  const checks = {
+    newsProviderConfigured: Boolean(config.newsApi.apiKey),
+    firebaseAdminConfigured: Boolean(config.firebase.projectId && config.firebase.clientEmail && config.firebase.privateKey),
+    aiProviderConfigured: Boolean(config.ai.apiKey)
+  };
+  const ready = Object.values(checks).every(Boolean);
+  const response = {
+    success: ready,
+    ...(ready
+      ? { data: { status: 'ready', service: 'newspulse-api', checks, timestamp: new Date().toISOString() } }
+      : { error: { code: 'NOT_READY', message: 'Required service configuration is incomplete.', details: { checks } } })
+  };
+  res.status(ready ? 200 : 503).json(response);
 });
 
 /**

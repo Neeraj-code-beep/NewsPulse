@@ -1,4 +1,4 @@
-import { liveNewsConfig } from '../config/liveNews.js';
+import { config as appConfig } from '../config/env.js';
 import { generateArticleId } from '../utils/articleHash.js';
 import { logger as defaultLogger } from '../utils/logger.js';
 import { newsService as defaultNewsService } from './news.service.js';
@@ -18,7 +18,7 @@ export class LiveNewsService {
   constructor({
     news = defaultNewsService,
     broadcast = () => {},
-    config = liveNewsConfig,
+    config = appConfig.liveNews,
     logger = defaultLogger,
     setIntervalFn = setInterval,
     clearIntervalFn = clearInterval,

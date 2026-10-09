@@ -1,19 +1,38 @@
+import { createServer } from 'node:http';
 import app from './app.js';
-import { config } from './config/env.js';
+import { config, validateProductionConfig } from './config/env.js';
 import { createLiveNewsRuntime } from './services/liveNewsRuntime.js';
 import { logger } from './utils/logger.js';
-const PORT = config.PORT;
-const server = app.listen(PORT, () => {
-  logger.info(`NewsPulse API server running in ${config.NODE_ENV} mode on port ${PORT}`);
-  logger.info(`Base API URL: http://localhost:${PORT}/api/v1`);
-});
+import { createShutdownHandler } from './utils/shutdown.js';
+
+validateProductionConfig(config);
+
+const server = createServer({ maxHeaderSize: 16 * 1024 }, app);
 const liveNewsRuntime = createLiveNewsRuntime(server);
-const handleShutdown = (signal) => {
-  logger.info(`Received ${signal}. Shutting down gracefully...`);
-  liveNewsRuntime.close().finally(() => server.close(() => process.exit(0)));
-  setTimeout(() => { logger.error('Could not close connections in time, forcefully shutting down'); process.exit(1); }, 10000);
-};
-process.once('SIGTERM', () => handleShutdown('SIGTERM'));
-process.once('SIGINT', () => handleShutdown('SIGINT'));
-export { server, liveNewsRuntime };
+const shutdown = createShutdownHandler({
+  closeRuntime: () => liveNewsRuntime.close(),
+  logger,
+  timeoutMs: config.SHUTDOWN_TIMEOUT_MS
+});
+
+server.on('error', (error) => {
+  logger.error('HTTP server startup/runtime error', {
+    errorCode: typeof error?.code === 'string' ? error.code : 'SERVER_ERROR'
+  });
+  process.exitCode = 1;
+});
+
+server.listen(config.PORT, () => {
+  logger.info('NewsPulse API server started', {
+    environment: config.NODE_ENV,
+    port: config.PORT,
+    apiPath: '/api/v1',
+    liveNewsEnabled: liveNewsRuntime.enabled
+  });
+});
+
+process.once('SIGTERM', () => { void shutdown('SIGTERM'); });
+process.once('SIGINT', () => { void shutdown('SIGINT'); });
+
+export { server, liveNewsRuntime, shutdown };
 export default server;

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import express from 'express';
 import { logger } from '../utils/logger.js';
 import { notFoundMiddleware } from '../middleware/notFound.middleware.js';
+import { requestIdMiddleware } from '../middleware/requestId.middleware.js';
 import { AppError, ValidationError } from '../utils/errors.js';
 
 process.env.NODE_ENV = 'production';
@@ -11,10 +12,12 @@ logger.error = () => {};
 
 const withErrorApp = async (run) => {
   const app = express();
+  app.use(requestIdMiddleware);
   app.use(express.json());
   app.get('/expected', (_req, _res, next) => next(new AppError('Expected failure', 409, 'EXPECTED_FAILURE')));
   app.get('/validation', (_req, _res, next) => next(new ValidationError('Invalid request')));
   app.get('/unexpected', (_req, _res, next) => next(new Error('internal test detail')));
+  app.get('/provider-failure', (_req, _res, next) => next(new AppError('provider token must not leak', 503, 'PROVIDER_FAILURE')));
   app.post('/body', (req, res) => res.json(req.body));
   app.use(notFoundMiddleware);
   app.use(errorMiddleware);
@@ -37,7 +40,11 @@ test('expected application and validation errors use the standard error contract
     assert.equal(expectedResponse.status, 409);
     assert.deepEqual(await expectedResponse.json(), {
       success: false,
-      error: { code: 'EXPECTED_FAILURE', message: 'Expected failure' }
+      error: {
+        code: 'EXPECTED_FAILURE',
+        message: 'Expected failure',
+        requestId: expectedResponse.headers.get('x-request-id')
+      }
     });
 
     const validationResponse = await fetch(`${baseUrl}/validation`);
@@ -54,8 +61,21 @@ test('unexpected errors do not expose stack traces in API responses', async () =
     assert.equal(response.status, 500);
     assert.equal(body.success, false);
     assert.equal(body.error.code, 'INTERNAL_ERROR');
-    assert.equal(body.error.message, 'Something went wrong');
+    assert.equal(body.error.message, 'Service temporarily unavailable.');
     assert.equal(Object.hasOwn(body.error, 'stack'), false);
+  });
+});
+
+test('production 5xx application errors do not expose provider details and include request correlation', async () => {
+  await withErrorApp(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/provider-failure?token=query-secret`);
+    const body = await response.json();
+    assert.equal(response.status, 503);
+    assert.equal(body.error.code, 'PROVIDER_FAILURE');
+    assert.equal(body.error.message, 'Service temporarily unavailable.');
+    assert.equal(body.error.requestId, response.headers.get('x-request-id'));
+    assert.equal(JSON.stringify(body).includes('query-secret'), false);
+    assert.equal(JSON.stringify(body).includes('provider token'), false);
   });
 });
 

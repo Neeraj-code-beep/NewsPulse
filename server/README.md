@@ -41,6 +41,8 @@ Configure your environment variables in `.env`:
 ```env
 NODE_ENV=development
 PORT=5000
+SHUTDOWN_TIMEOUT_MS=10000
+TRUST_PROXY_HOPS=0
 
 CLIENT_URL=http://localhost:5173
 
@@ -48,6 +50,13 @@ FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_CLIENT_EMAIL=your-client-email
 FIREBASE_PRIVATE_KEY=your-private-key
 NEWS_API_KEY=your-newsapi-key
+NEWS_API_BASE_URL=https://newsapi.org/v2
+NEWS_CACHE_TTL_MS=900000
+CACHE_MAX_ENTRIES=1000
+LIVE_NEWS_ENABLED=true
+LIVE_NEWS_POLL_INTERVAL_MS=900000
+LIVE_NEWS_PAGE_SIZE=20
+LIVE_NEWS_SEEN_LIMIT=500
 GEMINI_API_KEY=your-gemini-api-key
 AI_MODEL=gemini-3.5-flash-lite
 AI_SUMMARY_CACHE_TTL_MS=86400000
@@ -55,7 +64,15 @@ AI_SUMMARY_MAX_INPUT_LENGTH=12000
 AI_SUMMARY_TIMEOUT_MS=30000
 ```
 
-`GEMINI_API_KEY` is server-only and must never be added to the frontend environment. AI settings have development defaults for model, cache TTL (24 hours), maximum article text (12,000 characters), and provider timeout (30 seconds). Numeric settings must be positive integers; the server bounds cache TTL to 30 days, maximum input to 50,000 characters, and timeout to 120 seconds. The key is required only when a cache miss needs a live generation; without it the endpoint returns `AI_CONFIGURATION_ERROR`.
+All backend environment values are parsed centrally and invalid ports, URLs, TTLs, proxy-hop counts, live polling values, and AI limits prevent startup. The production `npm start` command also requires an HTTPS `CLIENT_URL`, Firebase Admin project ID/email/private key, `NEWS_API_KEY`, and `GEMINI_API_KEY`; errors list missing variable names without printing secret values. Use `\\n` separators or real newlines in `FIREBASE_PRIVATE_KEY`. Keep credentials in the host's secret manager or an ignored local `.env` file. Never add NewsAPI, Gemini, Firebase Admin, or private credentials to `VITE_*` variables.
+
+`GEMINI_API_KEY` is server-only. AI settings default to model `gemini-3.5-flash-lite`, cache TTL 24 hours, maximum article text 12,000 characters, and a 30 second provider timeout. The server bounds AI cache TTL to 30 days, maximum input to 50,000 characters, and timeout to 120 seconds. `NEWS_CACHE_TTL_MS` is bounded to 30 days; `CACHE_MAX_ENTRIES` defaults to 1,000 entries and accepts 100–10,000. Live-news settings validate the interval (60 seconds–1 hour), page size (1–50), and seen-state limit (50–5,000).
+
+Production frontend hosting must set `VITE_API_BASE_URL` to the HTTPS backend origin, and `CLIENT_URL` to the exact HTTPS frontend origin. Socket.IO uses the same origin allowlist and connects using WSS through HTTPS. `TRUST_PROXY_HOPS` defaults to `0`. Set it only to the exact number of trusted reverse-proxy hops between the client and this process; do not set it to `true` or guess. Rate limits and caches are process-local, so requests reaching multiple instances do not share quotas or cached entries. Choose a single backend instance unless the deployment accepts this limitation.
+
+The global JSON body limit is 64 KiB, URL-encoded bodies are limited to 16 KiB/100 parameters, and query parsing is capped at 50 parameters. The API returns an `X-Request-Id` for each request and includes it in error responses. Logs use structured JSON and omit query strings and raw exception messages. Production 5xx responses are generic; details are kept out of the API response.
+
+`GET /api/v1/health` reports process liveness without calling external providers. `GET /api/v1/health/ready` checks whether NewsAPI, Firebase Admin, and Gemini configuration is present; it does not make external requests, so a provider outage does not turn readiness into a network-dependent probe. Helmet's defaults are enabled. Review them against the frontend's hosting behavior before adding custom CSP directives. HSTS is effective only when the public site is served over HTTPS.
 
 ### 3. Running the Server
 
@@ -186,20 +203,6 @@ The response is `{ "success": true, "data": { "articles": [...] } }`. Each retur
 
 Candidate articles are found through the existing NewsAPI service; recommendations do not call Gemini, use embeddings, vector search, or personalization. Results are cached in the existing process-local cache for the NewsAPI cache TTL with versioned `related:v1:<article-hash>:<limit>` keys. Concurrent identical recommendation requests share one generation. As with the existing in-memory cache, entries and in-flight coordination do not persist across restarts or synchronize between server instances. Results are limited by the provider candidate set and available article metadata; this initial lexical algorithm does not understand semantic relationships beyond token overlap.
 
-### AI tests and provider verification
-AI service, route, validation, configuration, and provider adapter tests use deterministic mocks; tests do not call Gemini. Run all backend tests with `npm test` from `server/`. A live Gemini request requires a valid server-side `GEMINI_API_KEY`; it is not part of automated verification. No Gemini key was configured in the implementation environment, so live-provider verification was not executed.
-
-### Error Responses
-All errors follow a standardized format:
-```json
-{
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Description of the error"
-  }
-}
-```
 ### Real-time news updates
 The HTTP server created in `src/server.js` also hosts the Socket.IO v4 server. The Express app in `src/app.js` remains independently importable for REST tests. Socket.IO uses the same configured `CLIENT_URL` origin as Express CORS; live updates are public and do not require Firebase authentication.
 
@@ -234,3 +237,18 @@ LIVE_NEWS_SEEN_LIMIT=500
 The interval is accepted from 60 seconds through one hour, page size from 1 through 50, and seen-set capacity from 50 through 5,000; invalid values use safe defaults. The poller retains a bounded set of article hashes and URL fallbacks, and overlapping polls are skipped. The frontend uses one shared Socket.IO client with Socket.IO reconnection and displays updates as pending until the reader chooses to merge them into the main feed. Live updates are disabled while searching and are not attached to category pages.
 
 This is intentionally process-local: **one server process = one poller + one in-memory seen set**. State is reset on restart and does not synchronize between multiple backend instances. No Redis adapter or other distributed infrastructure is included. A multi-instance deployment will need future poller coordination and Socket.IO event synchronization.
+
+### AI tests and provider verification
+AI service, route, validation, configuration, and provider adapter tests use deterministic mocks; tests do not call Gemini. Run all backend tests with `npm test` from `server/`. A live Gemini request requires a valid server-side `GEMINI_API_KEY`; it is not part of automated verification. No Gemini key was configured in the implementation environment, so live-provider verification was not executed.
+
+### Error Responses
+All errors follow a standardized format:
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Description of the error"
+  }
+}
+```

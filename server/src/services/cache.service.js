@@ -1,9 +1,16 @@
 import { config } from '../config/env.js';
 
 class CacheService {
-  constructor(defaultTtlMs = config.newsApi.cacheTtlMs) {
+  constructor(defaultTtlMs = config.newsApi.cacheTtlMs, maxEntries = config.cacheMaxEntries) {
     this.store = new Map();
     this.defaultTtlMs = defaultTtlMs;
+    this.maxEntries = maxEntries;
+  }
+
+  removeExpired(now = Date.now()) {
+    for (const [key, entry] of this.store) {
+      if (now >= entry.expiresAt) this.store.delete(key);
+    }
   }
 
   /**
@@ -19,7 +26,8 @@ class CacheService {
       this.store.delete(key);
       return null;
     }
-
+    this.store.delete(key);
+    this.store.set(key, entry);
     return entry.value;
   }
 
@@ -30,8 +38,15 @@ class CacheService {
    * @param {number} [ttlMs]
    */
   set(key, value, ttlMs = this.defaultTtlMs) {
-    const expiresAt = Date.now() + ttlMs;
+    if (typeof key !== 'string' || !key || key.length > 4_096) throw new TypeError('Cache keys must be non-empty strings of at most 4096 characters.');
+    if (!Number.isSafeInteger(ttlMs) || ttlMs <= 0) throw new RangeError('Cache TTL must be a positive safe integer.');
+    if (!Number.isSafeInteger(this.maxEntries) || this.maxEntries < 1) throw new RangeError('Cache capacity must be a positive safe integer.');
+    const now = Date.now();
+    this.removeExpired(now);
+    const expiresAt = now + ttlMs;
+    this.store.delete(key);
     this.store.set(key, { value, expiresAt });
+    while (this.store.size > this.maxEntries) this.store.delete(this.store.keys().next().value);
   }
 
   /**

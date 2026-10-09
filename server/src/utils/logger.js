@@ -1,19 +1,21 @@
 /**
  * Lightweight structured logger
  */
-const formatMessage = (level, message, ...meta) => {
-  const timestamp = new Date().toISOString();
-  return `[${timestamp}] [${level.toUpperCase()}]: ${message}`;
+const write = (level, message, context = {}) => {
+  const record = {
+    timestamp: new Date().toISOString(),
+    level,
+    message: String(message),
+    ...(context && typeof context === 'object' && !Array.isArray(context) ? context : {})
+  };
+  const output = JSON.stringify(record);
+  if (level === 'error') console.error(output);
+  else if (level === 'warn') console.warn(output);
+  else console.log(output);
 };
 
 export const logger = {
-  info: (message, ...meta) => {
-    console.log(formatMessage('info', message), ...meta);
-  },
-  warn: (message, ...meta) => {
-    console.warn(formatMessage('warn', message), ...meta);
-  },
-  error: (message, ...meta) => {
-    console.error(formatMessage('error', message), ...meta);
-  }
+  info: (message, context) => write('info', message, context),
+  warn: (message, context) => write('warn', message, context),
+  error: (message, context) => write('error', message, context)
 };

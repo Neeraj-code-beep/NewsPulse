@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { getAIConfig } from '../config/ai.js';
+import { config } from '../config/env.js';
 import { geminiClient } from '../integrations/ai/gemini.client.js';
 import { cacheService } from './cache.service.js';
 import { AppError } from '../utils/errors.js';
@@ -8,7 +8,7 @@ const validationError = (message = 'Article title and description or content are
   new AppError(message, 400, 'AI_VALIDATION_ERROR');
 
 export class AIService {
-  constructor({ provider = geminiClient, cache = cacheService, configProvider = getAIConfig } = {}) {
+  constructor({ provider = geminiClient, cache = cacheService, configProvider = () => config.ai } = {}) {
     this.provider = provider;
     this.cache = cache;
     this.configProvider = configProvider;
